@@ -1,0 +1,39 @@
+## Build results
+bin/
+obj/
+
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## VS Code
+.vscode/
+
+## Rider / JetBrains
+.idea/
+*.iml
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Logs
+*.log
+
+## SQLite databases
+##*.db
+##*.db-shm
+##*.db-wal
+
+## Environment / secrets
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+## Publish output
+publish/
+
+## Dotnet tools
+.dotnet/
