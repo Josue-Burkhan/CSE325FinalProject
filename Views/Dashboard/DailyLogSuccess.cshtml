@@ -1,0 +1,37 @@
+@{
+    ViewData["Title"] = "Log Saved";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="flex flex-col items-center justify-center h-full p-8 text-center min-h-[60vh]">
+    <div class="size-20 bg-primary/20 rounded-full flex items-center justify-center text-primary mb-6 animate-bounce">
+        <span class="material-symbols-outlined text-4xl">check</span>
+    </div>
+    <h2 class="text-3xl font-bold mb-2 text-text-main dark:text-white">Log Saved!</h2>
+    <p class="text-text-secondary mb-8 max-w-md">Great job keeping your streak alive. Your progress has been recorded successfully.</p>
+    
+    <div class="flex flex-col sm:flex-row gap-4">
+        <a asp-controller="Dashboard" asp-action="Index" class="bg-primary text-text-main font-bold py-3 px-8 rounded-lg hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20">
+            Back to Dashboard
+        </a>
+        <a asp-controller="Dashboard" asp-action="LogProgress" class="bg-gray-100 dark:bg-gray-800 text-text-main dark:text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            Log Another
+        </a>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="mt-12 grid grid-cols-3 gap-6 max-w-lg w-full">
+        <div class="text-center">
+            <p class="text-3xl font-bold text-primary">+2h</p>
+            <p class="text-xs text-text-secondary uppercase mt-1">Added Today</p>
+        </div>
+        <div class="text-center">
+            <p class="text-3xl font-bold text-text-main dark:text-white">45%</p>
+            <p class="text-xs text-text-secondary uppercase mt-1">Goal Progress</p>
+        </div>
+        <div class="text-center">
+            <p class="text-3xl font-bold text-orange-500">7 🔥</p>
+            <p class="text-xs text-text-secondary uppercase mt-1">Day Streak</p>
+        </div>
+    </div>
+</div>

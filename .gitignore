@@ -27,13 +27,18 @@ Thumbs.db
 ##*.db-shm
 ##*.db-wal
 
-## Environment / secrets
+## Environment / secrets (IMPORTANT: Keep credentials safe!)
 appsettings.Development.json
-appsettings.*.json
-!appsettings.json
+appsettings.Production.json
+appsettings.Local.json
+secrets.json
+*.secrets.json
 
 ## Publish output
 publish/
 
 ## Dotnet tools
 .dotnet/
+
+PROJECT_SUMMARY.txt
+database_schema.sql

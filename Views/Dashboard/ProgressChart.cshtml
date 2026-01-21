@@ -1,0 +1,120 @@
+@{
+    ViewData["Title"] = "Goal Progress";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="max-w-6xl mx-auto space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div class="space-y-2">
+            <nav class="flex items-center text-sm font-medium text-slate-500 dark:text-slate-400">
+                <a asp-controller="Dashboard" asp-action="Index" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors">Dashboard</a>
+                <span class="mx-2 text-slate-300">/</span>
+                <a asp-controller="Dashboard" asp-action="SkillDetail" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors">Goals</a>
+                <span class="mx-2 text-slate-300">/</span>
+                <span class="text-primary font-semibold">Mastering Hooks</span>
+            </nav>
+            <div class="flex items-baseline gap-4">
+                <h1 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Mastering Hooks</h1>
+                <span class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary-dark dark:text-primary text-xs font-bold uppercase tracking-wide">In Progress</span>
+            </div>
+            <p class="text-slate-500 dark:text-slate-400 max-w-xl">Deep dive into React 18 hooks, performance optimization, and custom hook patterns.</p>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Circular Progress -->
+        <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:shadow-none border border-border-light dark:border-border-dark flex flex-col items-center justify-center relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <span class="material-symbols-outlined text-9xl">data_usage</span>
+            </div>
+            <h3 class="text-slate-500 dark:text-slate-400 font-medium text-sm absolute top-6 left-6">Goal Completion</h3>
+            <div class="relative size-48 mt-4">
+                <svg class="size-full -rotate-90 transform" viewBox="0 0 100 100">
+                    <circle class="text-slate-100 dark:text-slate-800" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+                    <circle class="text-primary progress-circle" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251" stroke-dashoffset="87.85" stroke-linecap="round" stroke-width="8"></circle>
+                </svg>
+                <div class="absolute top-0 left-0 size-full flex flex-col items-center justify-center">
+                    <span class="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">65%</span>
+                    <span class="text-xs text-slate-400 font-medium uppercase mt-1">Achieved</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bar Chart -->
+        <div class="lg:col-span-2 bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:shadow-none border border-border-light dark:border-border-dark flex flex-col">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Activity History</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Weekly breakdown of logged hours</p>
+                </div>
+            </div>
+            <div class="flex-1 flex items-end justify-between gap-2 min-h-[180px] w-full pt-4 relative">
+                <!-- Grid Lines -->
+                <div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8">
+                    <div class="w-full h-px bg-slate-100 dark:bg-slate-800 border-t border-dashed border-slate-200 dark:border-slate-700"></div>
+                    <div class="w-full h-px bg-slate-100 dark:bg-slate-800 border-t border-dashed border-slate-200 dark:border-slate-700"></div>
+                    <div class="w-full h-px bg-slate-100 dark:bg-slate-800 border-t border-dashed border-slate-200 dark:border-slate-700"></div>
+                    <div class="w-full h-px bg-slate-100 dark:bg-slate-800 border-t border-dashed border-slate-200 dark:border-slate-700"></div>
+                </div>
+                
+                <!-- Bar W38 -->
+                <div class="flex flex-col items-center gap-2 group w-full z-10">
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-sm h-[140px] flex items-end relative overflow-hidden">
+                        <div class="bar-animate w-full bg-primary/40 group-hover:bg-primary transition-colors" style="height: 35%"></div>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">W38</span>
+                </div>
+                <!-- Bar W39 -->
+                <div class="flex flex-col items-center gap-2 group w-full z-10">
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-sm h-[140px] flex items-end relative overflow-hidden">
+                        <div class="bar-animate w-full bg-primary/40 group-hover:bg-primary transition-colors" style="height: 50%"></div>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">W39</span>
+                </div>
+                <!-- Bar W40 -->
+                <div class="flex flex-col items-center gap-2 group w-full z-10">
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-sm h-[140px] flex items-end relative overflow-hidden">
+                        <div class="bar-animate w-full bg-primary/40 group-hover:bg-primary transition-colors" style="height: 45%"></div>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">W40</span>
+                </div>
+                <!-- Bar W41 -->
+                <div class="flex flex-col items-center gap-2 group w-full z-10">
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-sm h-[140px] flex items-end relative overflow-hidden">
+                        <div class="bar-animate w-full bg-primary/40 group-hover:bg-primary transition-colors" style="height: 65%"></div>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">W41</span>
+                </div>
+                <!-- Bar W42 (Current) -->
+                <div class="flex flex-col items-center gap-2 group w-full z-10">
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-sm h-[140px] flex items-end relative overflow-hidden">
+                        <div class="bar-animate w-full bg-primary group-hover:bg-primary-dark transition-colors" style="height: 80%"></div>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">W42</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-surface-dark p-5 rounded-2xl border border-border-light dark:border-border-dark shadow-sm">
+            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Hours</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">24h 30m</p>
+        </div>
+        <div class="bg-white dark:bg-surface-dark p-5 rounded-2xl border border-border-light dark:border-border-dark shadow-sm">
+            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Sessions</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">18</p>
+        </div>
+        <div class="bg-white dark:bg-surface-dark p-5 rounded-2xl border border-border-light dark:border-border-dark shadow-sm">
+            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Current Streak</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">7 days</p>
+        </div>
+        <div class="bg-white dark:bg-surface-dark p-5 rounded-2xl border border-border-light dark:border-border-dark shadow-sm">
+            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Avg/Day</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">1h 20m</p>
+        </div>
+    </div>
+</div>
