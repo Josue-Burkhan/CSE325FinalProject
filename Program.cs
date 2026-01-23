@@ -1,66 +1,58 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Components.Authorization;
 using CSE325FinalProject.Data;
 using CSE325FinalProject.Services;
+using CSE325FinalProject.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
+// Add Blazor Server with Interactive Server Components
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 
-// Configure MySQL Database
+// Configure MySQL Database (UNCHANGED from MVC)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
 );
 
-// Configure Session
-builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession(options =>
-{
-    options.IdleTimeout = TimeSpan.FromHours(24);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
-    options.Cookie.Name = ".SkillTracker.Session";
-});
-
-// Register Services
+// Register Services (100% REUSED from MVC - no changes needed)
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IGoalService, GoalService>();
 builder.Services.AddScoped<IProgressLogService, ProgressLogService>();
 builder.Services.AddScoped<IAiPlanService, AiPlanService>();
 
-// HTTP Client for AI service
+// HTTP Client for AI service (UNCHANGED)
 builder.Services.AddHttpClient<IAiPlanService, AiPlanService>();
+
+// Blazor Authentication
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuthenticationStateProvider, BlazorAuthStateProvider>();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorizationCore();
+
+// Keep API controllers for external/mobile app use
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-app.UseRouting();
+app.UseStaticFiles();
+app.UseAntiforgery();
 
-// Session middleware must be before authorization
-app.UseSession();
-
-app.UseAuthorization();
-
-app.MapStaticAssets();
-
-// API routes
+// API routes (keeping for compatibility)
 app.MapControllers();
 
-// MVC routes  
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
-
+// Blazor routes
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 app.Run();

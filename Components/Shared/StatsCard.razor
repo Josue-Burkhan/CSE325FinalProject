@@ -1,0 +1,34 @@
+@* Stats Card Component *@
+
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm">
+    <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg @GetColorClass() flex items-center justify-center">
+            <span class="material-symbols-outlined">@Icon</span>
+        </div>
+        <div>
+            <p class="text-2xl font-bold text-text-main dark:text-white">@Value</p>
+            <p class="text-xs text-text-secondary dark:text-gray-500">@Title</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "school";
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "0";
+    [Parameter] public string Color { get; set; } = "primary";
+
+    private string GetColorClass()
+    {
+        return Color switch
+        {
+            "primary" => "bg-primary/10 text-primary",
+            "green" => "bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400",
+            "blue" => "bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
+            "orange" => "bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
+            "red" => "bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400",
+            "purple" => "bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400",
+            _ => "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+        };
+    }
+}

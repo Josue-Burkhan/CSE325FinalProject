@@ -1,0 +1,309 @@
+@page "/progress/log"
+@attribute [Authorize]
+@inject ISkillService SkillService
+@inject IGoalService GoalService
+@inject IProgressLogService ProgressLogService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Log Progress - SkillTracker</PageTitle>
+
+<div class="w-full max-w-[640px] mx-auto flex flex-col gap-10">
+    <!-- Header with back button -->
+    <div class="flex items-center gap-4 -ml-2">
+        <a href="@GetBackUrl()" class="flex items-center justify-center size-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text-main dark:text-white group">
+            <span class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
+        </a>
+        <div class="flex flex-col">
+            <span class="text-xs font-semibold text-primary tracking-wide uppercase">Logging Progress</span>
+            <h1 class="text-lg font-bold leading-none text-text-main dark:text-white">
+                @if (selectedSkill != null)
+                {
+                    <span>Skill: @selectedSkill.Name</span>
+                }
+                else
+                {
+                    <span>Daily Progress</span>
+                }
+            </h1>
+        </div>
+    </div>
+
+    <!-- Intro Text -->
+    <div class="text-center sm:text-left">
+        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-main dark:text-white mb-2">How did it go?</h2>
+        <p class="text-text-secondary dark:text-gray-400 text-lg">Every step forward counts. Capture your session below.</p>
+    </div>
+    
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400">
+            @errorMessage
+        </div>
+    }
+
+    <!-- Skill Selection (if not preselected) -->
+    @if (selectedSkill == null)
+    {
+        <section class="flex flex-col gap-3">
+            <label class="flex items-center gap-2 text-sm font-bold text-text-main dark:text-gray-200 uppercase tracking-wider">
+                <span class="material-symbols-outlined text-primary text-lg">school</span>
+                Select Skill
+            </label>
+            <select @bind="model.SkillId" class="w-full p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border-2 border-transparent focus:border-primary/50 text-text-main dark:text-white">
+                <option value="">Choose a skill...</option>
+                @foreach (var skill in skills)
+                {
+                    <option value="@skill.Id">@skill.Name</option>
+                }
+            </select>
+        </section>
+    }
+
+    <!-- Session Notes -->
+    <section class="flex flex-col gap-3">
+        <label class="flex items-center gap-2 text-sm font-bold text-text-main dark:text-gray-200 uppercase tracking-wider" for="session-notes">
+            <span class="material-symbols-outlined text-primary text-lg">edit_note</span>
+            Session Notes
+        </label>
+        <div class="relative group">
+            <textarea @bind="model.Description" 
+                class="w-full min-h-[160px] p-5 rounded-xl bg-gray-50 dark:bg-surface-dark border-2 border-transparent focus:border-primary/50 focus:ring-0 text-base text-text-main dark:text-white placeholder:text-text-secondary/60 resize-none transition-all shadow-sm hover:shadow-md outline-none" 
+                placeholder="Describe what you learned or practiced... (e.g., 'Mastered list comprehensions and debugged the API endpoint')"></textarea>
+            <div class="absolute bottom-3 right-4 text-xs font-medium text-text-secondary dark:text-gray-500 opacity-0 group-focus-within:opacity-100 transition-opacity">
+                Optional
+            </div>
+        </div>
+    </section>
+
+    <!-- Duration -->
+    <section class="flex flex-col gap-3">
+        <label class="flex items-center gap-2 text-sm font-bold text-text-main dark:text-gray-200 uppercase tracking-wider">
+            <span class="material-symbols-outlined text-primary text-lg">timer</span>
+            Time Spent
+        </label>
+        <div class="grid grid-cols-2 gap-4 sm:gap-6">
+            <div class="relative group">
+                <div class="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border-2 border-transparent group-focus-within:border-primary/30 transition-all">
+                    <input @bind="hours" type="number" min="0" max="23" placeholder="0"
+                        class="w-full text-center bg-transparent border-none p-0 text-4xl font-bold text-text-main dark:text-white focus:ring-0 placeholder:text-gray-300 dark:placeholder:text-gray-600" />
+                    <span class="text-sm font-medium text-text-secondary dark:text-gray-400 mt-1">Hours</span>
+                </div>
+            </div>
+            <div class="relative group">
+                <div class="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border-2 border-transparent group-focus-within:border-primary/30 transition-all">
+                    <input @bind="minutes" type="number" min="0" max="59" placeholder="30"
+                        class="w-full text-center bg-transparent border-none p-0 text-4xl font-bold text-text-main dark:text-white focus:ring-0 placeholder:text-gray-300 dark:placeholder:text-gray-600" />
+                    <span class="text-sm font-medium text-text-secondary dark:text-gray-400 mt-1">Minutes</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Date -->
+    <section class="flex flex-col gap-3">
+        <label class="flex items-center gap-2 text-sm font-bold text-text-main dark:text-gray-200 uppercase tracking-wider">
+            <span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+            Date
+        </label>
+        <input @bind="model.LogDate" type="date"
+            class="w-full p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border-2 border-transparent focus:border-primary/50 text-text-main dark:text-white" />
+    </section>
+
+    <!-- Quality Rating -->
+    <section class="flex flex-col gap-3">
+        <label class="flex items-center gap-2 text-sm font-bold text-text-main dark:text-gray-200 uppercase tracking-wider">
+            <span class="material-symbols-outlined text-primary text-lg">star</span>
+            Session Quality
+        </label>
+        <div class="flex gap-2 justify-center">
+            @for (int i = 1; i <= 5; i++)
+            {
+                var rating = i;
+                <button type="button" @onclick="@(() => model.QualityRating = rating)"
+                    class="p-2 rounded-lg transition-all @(model.QualityRating >= rating ? "text-yellow-400" : "text-gray-300 dark:text-gray-600 hover:text-yellow-200")">
+                    <span class="material-symbols-outlined text-3xl">star</span>
+                </button>
+            }
+        </div>
+    </section>
+
+    <!-- Milestones (if goal selected) -->
+    @if (milestones.Any())
+    {
+        <section class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 text-sm font-bold text-text-main dark:text-gray-200 uppercase tracking-wider">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span>
+                    Milestones
+                </label>
+                <span class="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded-md">
+                    @model.CompletedMilestoneIds.Count/@milestones.Count Completed
+                </span>
+            </div>
+            <div class="flex flex-col gap-3">
+                @foreach (var milestone in milestones)
+                {
+                    var isCompleted = milestone.IsCompleted || model.CompletedMilestoneIds.Contains(milestone.Id);
+                    <label class="relative flex items-center p-4 rounded-xl cursor-pointer @(isCompleted ? "bg-white dark:bg-surface-dark border-2 border-primary/20" : "bg-gray-50 dark:bg-surface-dark border-2 border-transparent") hover:border-primary/50 shadow-sm hover:shadow-md transition-all group">
+                        <input type="checkbox" checked="@isCompleted" disabled="@milestone.IsCompleted"
+                            @onchange="@(() => ToggleMilestone(milestone.Id))"
+                            class="form-checkbox size-6 rounded-md text-primary focus:ring-primary/50 border-gray-300 dark:border-gray-600 transition duration-150 ease-in-out mr-4" />
+                        <div class="flex flex-col">
+                            <span class="text-base font-medium text-text-main dark:text-white group-hover:text-primary transition-colors">@milestone.Title</span>
+                            @if (!string.IsNullOrEmpty(milestone.Category))
+                            {
+                                <span class="text-xs text-text-secondary dark:text-gray-500">@milestone.Category</span>
+                            }
+                        </div>
+                        @if (isCompleted)
+                        {
+                            <div class="absolute right-4 text-primary">
+                                <span class="material-symbols-outlined">verified</span>
+                            </div>
+                        }
+                    </label>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+<!-- Sticky Footer Action -->
+<div class="fixed bottom-0 left-0 md:left-64 right-0 z-40 bg-white/80 dark:bg-background-dark/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 px-6 py-4 flex justify-center">
+    <div class="w-full max-w-[640px] flex items-center justify-between gap-4">
+        <div class="hidden sm:flex flex-col">
+            <span class="text-xs font-bold text-text-secondary uppercase">Total Time</span>
+            <span class="text-lg font-bold text-text-main dark:text-white">@hours h @minutes m</span>
+        </div>
+        <button @onclick="SaveProgress" disabled="@isSaving"
+            class="flex-1 sm:flex-none sm:w-auto min-w-[200px] flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-text-main font-bold text-lg py-3.5 px-8 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transform hover:-translate-y-0.5 transition-all disabled:opacity-50">
+            @if (isSaving)
+            {
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-text-main"></div>
+            }
+            else
+            {
+                <span class="material-symbols-outlined">save</span>
+            }
+            Log Progress
+        </button>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public int? SkillId { get; set; }
+    [SupplyParameterFromQuery] public int? GoalId { get; set; }
+
+    private List<SkillDto> skills = new();
+    private SkillDto? selectedSkill;
+    private List<MilestoneDto> milestones = new();
+    private ProgressLogModel model = new();
+    private int hours;
+    private int minutes = 30;
+    private bool isSaving;
+    private string? errorMessage;
+    private int userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("userId")?.Value;
+        
+        if (!int.TryParse(userIdClaim, out userId) || userId <= 0)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        skills = await SkillService.GetUserSkillsAsync(userId);
+        model.LogDate = DateTime.Today;
+
+        if (SkillId.HasValue)
+        {
+            model.SkillId = SkillId.Value;
+            selectedSkill = skills.FirstOrDefault(s => s.Id == SkillId.Value);
+        }
+
+        if (GoalId.HasValue)
+        {
+            model.GoalId = GoalId.Value;
+            var goal = await GoalService.GetGoalByIdAsync(GoalId.Value, userId);
+            if (goal != null)
+            {
+                milestones = goal.Milestones.Where(m => !m.IsCompleted).ToList();
+            }
+        }
+    }
+
+    private void ToggleMilestone(int milestoneId)
+    {
+        if (model.CompletedMilestoneIds.Contains(milestoneId))
+            model.CompletedMilestoneIds.Remove(milestoneId);
+        else
+            model.CompletedMilestoneIds.Add(milestoneId);
+    }
+
+    private async Task SaveProgress()
+    {
+        if (model.SkillId == 0)
+        {
+            errorMessage = "Please select a skill";
+            return;
+        }
+
+        if (hours == 0 && minutes == 0)
+        {
+            errorMessage = "Please enter time spent";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var request = new CreateProgressLogRequest
+            {
+                SkillId = model.SkillId,
+                GoalId = model.GoalId,
+                Title = model.Title,
+                Description = model.Description,
+                HoursLogged = hours + (minutes / 60m),
+                LogDate = model.LogDate,
+                QualityRating = model.QualityRating,
+                CompletedMilestoneIds = model.CompletedMilestoneIds
+            };
+
+            var result = await ProgressLogService.CreateLogAsync(userId, request);
+            
+            Navigation.NavigateTo(GetBackUrl());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to save: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private string GetBackUrl()
+    {
+        if (GoalId.HasValue) return $"/goals/{GoalId}";
+        if (SkillId.HasValue) return $"/skills/{SkillId}";
+        return "/";
+    }
+
+    public class ProgressLogModel
+    {
+        public int SkillId { get; set; }
+        public int? GoalId { get; set; }
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public DateTime LogDate { get; set; } = DateTime.Today;
+        public int? QualityRating { get; set; }
+        public List<int> CompletedMilestoneIds { get; set; } = new();
+    }
+}

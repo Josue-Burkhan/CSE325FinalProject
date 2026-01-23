@@ -1,0 +1,104 @@
+@page "/skills"
+@attribute [Authorize]
+@inject ISkillService SkillService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>My Skills - SkillTracker</PageTitle>
+
+<div class="max-w-[1400px] mx-auto flex flex-col gap-8">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-text-main dark:text-white">My Skills</h1>
+            <p class="text-text-secondary dark:text-gray-400 mt-1">Manage and track all your learning skills</p>
+        </div>
+        <a href="/skills/new" class="flex items-center gap-2 px-6 h-11 bg-primary hover:bg-primary-dark text-text-main font-bold text-sm rounded-lg shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5">
+            <span class="material-symbols-outlined">add</span>
+            New Skill
+        </a>
+    </header>
+    
+    <!-- Search and Filters -->
+    <div class="flex flex-col md:flex-row gap-4 items-start md:items-center">
+        <div class="flex-1 max-w-md">
+            <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined">search</span>
+                <input @bind="searchTerm" @bind:event="oninput" 
+                       class="w-full h-11 pl-10 pr-4 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50" 
+                       placeholder="Search skills..." />
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <select @bind="statusFilter" class="h-11 px-4 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white text-sm">
+                <option value="">All Status</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="paused">Paused</option>
+                <option value="not_started">Not Started</option>
+            </select>
+            <select @bind="categoryFilter" class="h-11 px-4 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white text-sm">
+                <option value="">All Categories</option>
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat.Id">@cat.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <!-- Skills Grid -->
+    @if (isLoading)
+    {
+        <div class="flex items-center justify-center py-16">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+    }
+    else if (!filteredSkills.Any())
+    {
+        <EmptyState 
+            Icon="@(skills.Any() ? "search_off" : "psychology")"
+            Title="@(skills.Any() ? "No skills match your filters" : "No skills yet")"
+            Message="@(skills.Any() ? "Try adjusting your search or filters." : "Start your learning journey by creating your first skill.")"
+            ActionUrl="/skills/new"
+            ActionText="Create New Skill"
+            ActionIcon="add" />
+    }
+    else
+    {
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            @foreach (var skill in filteredSkills)
+            {
+                <SkillCard Skill="skill" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<SkillDto> skills = new();
+    private List<CategoryDto> categories = new();
+    private string searchTerm = "";
+    private string statusFilter = "";
+    private string categoryFilter = "";
+    private bool isLoading = true;
+    private int userId;
+
+    private IEnumerable<SkillDto> filteredSkills => skills
+        .Where(s => string.IsNullOrEmpty(searchTerm) || s.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .Where(s => string.IsNullOrEmpty(statusFilter) || s.Status == statusFilter)
+        .Where(s => string.IsNullOrEmpty(categoryFilter) || s.Category?.Id.ToString() == categoryFilter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("userId")?.Value;
+        
+        if (int.TryParse(userIdClaim, out userId) && userId > 0)
+        {
+            skills = await SkillService.GetUserSkillsAsync(userId);
+            categories = await SkillService.GetCategoriesAsync();
+        }
+        
+        isLoading = false;
+    }
+}

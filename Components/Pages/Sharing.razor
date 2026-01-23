@@ -1,0 +1,128 @@
+@page "/sharing"
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Sharing Center - SkillTracker</PageTitle>
+
+<div class="max-w-3xl mx-auto flex flex-col gap-8">
+    <header>
+        <h1 class="text-3xl font-bold text-text-main dark:text-white">Sharing Center</h1>
+        <p class="text-text-secondary dark:text-gray-400 mt-1">Control who can see your skills and progress</p>
+    </header>
+    
+    <!-- Public Profile Toggle -->
+    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-6 md:p-8 border border-gray-100 dark:border-gray-800">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-bold text-text-main dark:text-white">Public Profile</h2>
+                <p class="text-text-secondary dark:text-gray-400 mt-1">Allow others to view your profile and public skills</p>
+            </div>
+            <button @onclick="TogglePublicProfile" class="w-12 h-6 rounded-full @(isProfilePublic ? "bg-primary" : "bg-gray-200 dark:bg-gray-700") relative transition-colors">
+                <div class="absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform @(isProfilePublic ? "translate-x-6" : "")"></div>
+            </button>
+        </div>
+        
+        @if (isProfilePublic)
+        {
+            <div class="mt-6 p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Your Public URL</label>
+                <div class="flex gap-2">
+                    <input value="@publicUrl" readonly class="flex-1 h-11 px-4 bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white" />
+                    <button @onclick="CopyUrl" class="px-4 h-11 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-text-main dark:text-white font-medium rounded-lg transition-colors flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                        Copy
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+    
+    <!-- Visibility Settings -->
+    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-6 md:p-8 border border-gray-100 dark:border-gray-800">
+        <h2 class="text-xl font-bold text-text-main dark:text-white mb-6">What to Show on Public Profile</h2>
+        
+        <div class="space-y-4">
+            <label class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark rounded-lg cursor-pointer">
+                <div>
+                    <p class="font-medium text-text-main dark:text-white">Show Skills</p>
+                    <p class="text-sm text-text-secondary dark:text-gray-400">Display your public skills</p>
+                </div>
+                <input type="checkbox" @bind="showSkills" class="w-5 h-5 text-primary rounded" />
+            </label>
+            
+            <label class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark rounded-lg cursor-pointer">
+                <div>
+                    <p class="font-medium text-text-main dark:text-white">Show Progress</p>
+                    <p class="text-sm text-text-secondary dark:text-gray-400">Display progress bars and percentages</p>
+                </div>
+                <input type="checkbox" @bind="showProgress" class="w-5 h-5 text-primary rounded" />
+            </label>
+            
+            <label class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark rounded-lg cursor-pointer">
+                <div>
+                    <p class="font-medium text-text-main dark:text-white">Show Goals</p>
+                    <p class="text-sm text-text-secondary dark:text-gray-400">Display goal details within skills</p>
+                </div>
+                <input type="checkbox" @bind="showGoals" class="w-5 h-5 text-primary rounded" />
+            </label>
+            
+            <label class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark rounded-lg cursor-pointer">
+                <div>
+                    <p class="font-medium text-text-main dark:text-white">Show Statistics</p>
+                    <p class="text-sm text-text-secondary dark:text-gray-400">Display total hours and achievements</p>
+                </div>
+                <input type="checkbox" @bind="showStatistics" class="w-5 h-5 text-primary rounded" />
+            </label>
+        </div>
+    </div>
+    
+    <!-- Save Button -->
+    <div class="flex justify-end">
+        <button @onclick="SaveSettings" disabled="@isSaving" class="flex items-center gap-2 px-8 h-11 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-all disabled:opacity-50">
+            @if (isSaving)
+            {
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-text-main"></div>
+            }
+            else
+            {
+                <span class="material-symbols-outlined text-[18px]">save</span>
+            }
+            Save Settings
+        </button>
+    </div>
+</div>
+
+@code {
+    private bool isProfilePublic;
+    private bool showSkills = true;
+    private bool showProgress = true;
+    private bool showGoals;
+    private bool showStatistics = true;
+    private bool isSaving;
+    private string publicUrl = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst("userId")?.Value;
+        publicUrl = $"https://skilltracker.app/u/{userId}";
+    }
+
+    private void TogglePublicProfile()
+    {
+        isProfilePublic = !isProfilePublic;
+    }
+
+    private async Task CopyUrl()
+    {
+        // TODO: Implement clipboard copy via JS interop
+        await Task.CompletedTask;
+    }
+
+    private async Task SaveSettings()
+    {
+        isSaving = true;
+        await Task.Delay(500); // Simulate save
+        isSaving = false;
+    }
+}

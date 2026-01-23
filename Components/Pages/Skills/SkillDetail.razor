@@ -1,0 +1,199 @@
+@page "/skills/{Id:int}"
+@attribute [Authorize]
+@inject ISkillService SkillService
+@inject IGoalService GoalService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>@(skill?.Name ?? "Skill Detail") - SkillTracker</PageTitle>
+
+@if (isLoading)
+{
+    <div class="flex items-center justify-center min-h-[60vh]">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+}
+else if (skill == null)
+{
+    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <span class="material-symbols-outlined text-6xl text-gray-400 mb-4">error</span>
+        <h1 class="text-2xl font-bold text-text-main dark:text-white mb-2">Skill not found</h1>
+        <p class="text-text-secondary dark:text-gray-400 mb-6">The skill you're looking for doesn't exist or you don't have access to it.</p>
+        <a href="/skills" class="px-6 py-3 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-colors">
+            Back to Skills
+        </a>
+    </div>
+}
+else
+{
+    <div class="max-w-[1200px] mx-auto flex flex-col gap-8">
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm text-text-secondary dark:text-gray-400">
+            <a href="/" class="hover:text-primary transition-colors">Dashboard</a>
+            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+            <a href="/skills" class="hover:text-primary transition-colors">Skills</a>
+            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+            <span class="text-text-main dark:text-white font-medium">@skill.Name</span>
+        </nav>
+        
+        <!-- Header -->
+        <header class="bg-surface-light dark:bg-surface-dark rounded-2xl p-6 md:p-8 border border-gray-100 dark:border-gray-800">
+            <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+                <div class="flex items-start gap-4">
+                    <div class="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined text-3xl">@(skill.Icon ?? "school")</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <h1 class="text-2xl md:text-3xl font-bold text-text-main dark:text-white">@skill.Name</h1>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full @GetStatusColor(skill.Status)">
+                                @GetStatusLabel(skill.Status)
+                            </span>
+                        </div>
+                        <p class="text-text-secondary dark:text-gray-400 mt-1">@(skill.Category?.Name ?? "Uncategorized")</p>
+                        @if (!string.IsNullOrEmpty(skill.Description))
+                        {
+                            <p class="text-text-main dark:text-gray-300 mt-3 max-w-2xl">@skill.Description</p>
+                        }
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="/progress/log?skillId=@skill.Id" class="flex items-center gap-2 px-4 h-10 bg-primary hover:bg-primary-dark text-text-main font-bold text-sm rounded-lg transition-all">
+                        <span class="material-symbols-outlined text-[18px]">add</span>
+                        Log Progress
+                    </a>
+                    <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-text-secondary transition-colors">
+                        <span class="material-symbols-outlined">more_vert</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="mt-6">
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-text-secondary dark:text-gray-400">Mastery Progress</span>
+                    <span class="font-bold text-text-main dark:text-white">@Math.Round(skill.MasteryPercentage)%</span>
+                </div>
+                <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden">
+                    <div class="bg-primary h-3 rounded-full transition-all duration-1000" style="width: @Math.Min(100, skill.MasteryPercentage)%"></div>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                    <p class="text-2xl font-bold text-text-main dark:text-white">@Math.Round(skill.TotalHoursLogged, 1)h</p>
+                    <p class="text-xs text-text-secondary dark:text-gray-500">Hours Logged</p>
+                </div>
+                <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                    <p class="text-2xl font-bold text-text-main dark:text-white">@skill.GoalsCount</p>
+                    <p class="text-xs text-text-secondary dark:text-gray-500">Total Goals</p>
+                </div>
+                <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                    <p class="text-2xl font-bold text-text-main dark:text-white">@skill.CompletedGoalsCount</p>
+                    <p class="text-xs text-text-secondary dark:text-gray-500">Completed</p>
+                </div>
+                <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                    <p class="text-2xl font-bold text-text-main dark:text-white">@(skill.TargetDate?.ToString("MMM dd") ?? "No target")</p>
+                    <p class="text-xs text-text-secondary dark:text-gray-500">Target Date</p>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Goals Section -->
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-text-main dark:text-white">Goals</h2>
+                <button class="flex items-center gap-2 px-4 h-9 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-text-main dark:text-white font-medium text-sm rounded-lg transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">add</span>
+                    Add Goal
+                </button>
+            </div>
+            
+            @if (goals.Any())
+            {
+                <div class="space-y-3">
+                    @foreach (var goal in goals)
+                    {
+                        <a href="/goals/@goal.Id" class="block bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-gray-100 dark:border-gray-800 hover:border-primary/30 transition-all">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center @(goal.Status == "completed" ? "bg-green-100 dark:bg-green-900/20 text-green-600" : "bg-gray-100 dark:bg-gray-800 text-gray-400")">
+                                        <span class="material-symbols-outlined text-[18px]">@(goal.Status == "completed" ? "check_circle" : "radio_button_unchecked")</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-medium text-text-main dark:text-white">@goal.Title</h3>
+                                        <p class="text-xs text-text-secondary dark:text-gray-500">
+                                            @goal.MilestonesCount milestones · @Math.Round(goal.LoggedHours, 1)h logged
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="text-right">
+                                        <p class="text-sm font-bold text-text-main dark:text-white">@Math.Round(goal.ProgressPercentage)%</p>
+                                    </div>
+                                    <span class="material-symbols-outlined text-gray-400">chevron_right</span>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
+                                    <div class="bg-primary h-1.5 rounded-full" style="width: @Math.Min(100, goal.ProgressPercentage)%"></div>
+                                </div>
+                            </div>
+                        </a>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-8 text-center border border-gray-100 dark:border-gray-800">
+                    <span class="material-symbols-outlined text-4xl text-gray-400 mb-2">flag</span>
+                    <p class="text-text-secondary dark:text-gray-400">No goals yet. Create your first goal to start tracking progress.</p>
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    
+    private SkillDto? skill;
+    private List<GoalDto> goals = new();
+    private bool isLoading = true;
+    private int userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("userId")?.Value;
+        
+        if (int.TryParse(userIdClaim, out userId) && userId > 0)
+        {
+            skill = await SkillService.GetSkillByIdAsync(Id, userId);
+            if (skill != null)
+            {
+                goals = await GoalService.GetSkillGoalsAsync(Id, userId);
+            }
+        }
+        
+        isLoading = false;
+    }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "completed" => "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+        "in_progress" => "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
+        "paused" => "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
+        _ => "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+    };
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "completed" => "Completed",
+        "in_progress" => "In Progress",
+        "paused" => "Paused",
+        "not_started" => "Not Started",
+        _ => status
+    };
+}

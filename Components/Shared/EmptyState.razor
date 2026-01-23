@@ -1,0 +1,27 @@
+@* Empty State Component *@
+
+<div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+    <div class="w-20 h-20 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mb-4">
+        <span class="material-symbols-outlined text-4xl">@Icon</span>
+    </div>
+    <h3 class="font-bold text-text-main dark:text-white text-xl mb-2">@Title</h3>
+    <p class="text-text-secondary dark:text-gray-400 max-w-md mb-6">
+        @Message
+    </p>
+    @if (!string.IsNullOrEmpty(ActionUrl))
+    {
+        <a href="@ActionUrl" class="flex items-center gap-2 px-8 h-12 bg-primary hover:bg-primary-dark text-text-main font-bold text-sm rounded-lg shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5">
+            <span class="material-symbols-outlined">@ActionIcon</span>
+            @ActionText
+        </a>
+    }
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "psychology";
+    [Parameter] public string Title { get; set; } = "No items yet";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public string ActionUrl { get; set; } = "";
+    [Parameter] public string ActionText { get; set; } = "Get Started";
+    [Parameter] public string ActionIcon { get; set; } = "add";
+}

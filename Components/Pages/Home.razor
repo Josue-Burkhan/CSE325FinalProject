@@ -1,0 +1,164 @@
+@page "/"
+@page "/dashboard"
+@attribute [Authorize]
+@inject ISkillService SkillService
+@inject IProgressLogService ProgressLogService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Dashboard - SkillTracker</PageTitle>
+
+<div class="max-w-[1400px] mx-auto flex flex-col gap-8">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div class="flex flex-col gap-2 max-w-2xl">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-text-main dark:text-white tracking-tight">
+                @greeting, @firstName! 👋
+            </h2>
+            <p class="text-text-secondary dark:text-gray-400 text-base md:text-lg">
+                @if (skills.Count > 0)
+                {
+                    <span>You have <strong>@skills.Count skill@(skills.Count != 1 ? "s" : "")</strong> in progress. Keep up the great work!</span>
+                }
+                else
+                {
+                    <span>Start your learning journey by creating your first skill.</span>
+                }
+            </p>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="hidden md:flex flex-col items-end">
+                <span class="text-xs text-text-secondary dark:text-gray-500 font-medium uppercase tracking-wider">Overall Progress</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-xl font-bold text-text-main dark:text-white">@Math.Round(stats.OverallProgress)%</span>
+                    <div class="w-24 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary" style="width: @(Math.Min(100, stats.OverallProgress))%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatsCard Icon="school" Title="Total Skills" Value="@stats.TotalSkills.ToString()" Color="primary" />
+        <StatsCard Icon="check_circle" Title="Goals Completed" Value="@stats.CompletedGoals.ToString()" Color="green" />
+        <StatsCard Icon="schedule" Title="This Week" Value="@($"{Math.Round(stats.TotalHoursThisWeek, 1)}h")" Color="blue" />
+        <StatsCard Icon="local_fire_department" Title="Day Streak" Value="@stats.CurrentStreak.ToString()" Color="orange" />
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+        <div class="w-full xl:w-auto flex-1 max-w-lg">
+            <label class="relative flex items-center w-full">
+                <span class="absolute left-4 text-text-secondary dark:text-gray-500 material-symbols-outlined">search</span>
+                <input @bind="searchTerm" @bind:event="oninput" 
+                       class="w-full h-12 pl-12 pr-4 bg-background-light dark:bg-background-dark border-none rounded-lg text-text-main dark:text-white placeholder:text-text-secondary focus:ring-2 focus:ring-primary/50 text-sm font-medium transition-shadow" 
+                       placeholder="Search for a skill..." type="text" />
+            </label>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
+            <div class="flex gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+                <button @onclick="@(() => SetFilter("all"))" 
+                        class="@GetFilterButtonClass("all")">
+                    <span class="material-symbols-outlined text-[18px]">grid_view</span>
+                    All Skills
+                </button>
+                <button @onclick="@(() => SetFilter("public"))" 
+                        class="@GetFilterButtonClass("public")">
+                    <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    Public
+                </button>
+                <button @onclick="@(() => SetFilter("private"))" 
+                        class="@GetFilterButtonClass("private")">
+                    <span class="material-symbols-outlined text-[18px]">lock</span>
+                    Private
+                </button>
+            </div>
+            <div class="h-6 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block mx-1"></div>
+            <a href="/skills/new" class="flex items-center gap-2 px-6 h-10 bg-primary hover:bg-primary-dark text-text-main font-bold text-sm rounded-lg shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5 active:translate-y-0 w-full sm:w-auto justify-center">
+                <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                <span>Create Skill</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Skills Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-12">
+        @if (isLoading)
+        {
+            <div class="col-span-full flex items-center justify-center py-16">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        }
+        else if (!filteredSkills.Any())
+        {
+            <EmptyState 
+                Icon="psychology"
+                Title="No skills yet"
+                Message="Start your learning journey by creating your first skill. Our AI can help you build a personalized learning plan."
+                ActionUrl="/skills/new"
+                ActionText="Create Your First Skill"
+                ActionIcon="add" />
+        }
+        else
+        {
+            @foreach (var skill in filteredSkills)
+            {
+                <SkillCard Skill="skill" />
+            }
+            <AddSkillCard />
+        }
+    </div>
+</div>
+
+@code {
+    private List<SkillDto> skills = new();
+    private DashboardStatsDto stats = new();
+    private string greeting = "Good evening";
+    private string firstName = "there";
+    private string searchTerm = "";
+    private string currentFilter = "all";
+    private bool isLoading = true;
+    private int userId;
+
+    private IEnumerable<SkillDto> filteredSkills => skills
+        .Where(s => currentFilter == "all" || s.Visibility == currentFilter)
+        .Where(s => string.IsNullOrEmpty(searchTerm) || s.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("userId")?.Value;
+        
+        if (int.TryParse(userIdClaim, out userId) && userId > 0)
+        {
+            firstName = authState.User.FindFirst("firstName")?.Value ?? "there";
+            
+            skills = await SkillService.GetUserSkillsAsync(userId);
+            stats = await ProgressLogService.GetDashboardStatsAsync(userId);
+        }
+        
+        // Set greeting based on time
+        var hour = DateTime.Now.Hour;
+        greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+        
+        isLoading = false;
+    }
+
+    private void SetFilter(string filter)
+    {
+        currentFilter = filter;
+    }
+
+    private string GetFilterButtonClass(string filter)
+    {
+        var baseClass = "flex items-center gap-2 px-4 h-10 rounded-lg font-medium text-sm whitespace-nowrap transition-all ";
+        
+        if (currentFilter == filter)
+        {
+            return baseClass + "bg-text-main text-white dark:bg-white dark:text-black shadow-lg shadow-gray-200 dark:shadow-none";
+        }
+        
+        return baseClass + "bg-background-light dark:bg-background-dark border border-transparent hover:border-gray-200 dark:hover:border-gray-700 text-text-secondary dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800";
+    }
+}

@@ -1,0 +1,28 @@
+@page "/account/logout"
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Logging out...</PageTitle>
+
+<div class="flex items-center justify-center min-h-screen">
+    <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p class="text-text-secondary dark:text-gray-400">Logging out...</p>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Clear cookies - this needs to be done server-side
+        var context = HttpContextAccessor.HttpContext;
+        if (context != null)
+        {
+            context.Response.Cookies.Delete("accessToken");
+            context.Response.Cookies.Delete("refreshToken");
+        }
+        
+        await Task.Delay(500);
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

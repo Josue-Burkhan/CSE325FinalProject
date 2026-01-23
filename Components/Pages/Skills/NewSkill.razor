@@ -1,0 +1,304 @@
+@page "/skills/new"
+@attribute [Authorize]
+@inject ISkillService SkillService
+@inject IAiPlanService AiPlanService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Create New Skill - SkillTracker</PageTitle>
+
+<div class="max-w-3xl mx-auto">
+    <!-- Header -->
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold text-text-main dark:text-white">Create New Skill</h1>
+        <p class="text-text-secondary dark:text-gray-400 mt-2">Define your learning goal and let AI help you create a structured plan</p>
+    </header>
+    
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400">
+            @errorMessage
+        </div>
+    }
+    
+    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+        <!-- Progress Steps -->
+        <div class="flex border-b border-gray-100 dark:border-gray-800">
+            @for (int i = 1; i <= 3; i++)
+            {
+                var stepNum = i;
+                <div class="flex-1 p-4 @(currentStep == stepNum ? "bg-primary/5 dark:bg-primary/10" : "") @(currentStep > stepNum ? "bg-green-50 dark:bg-green-900/10" : "")">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold @(currentStep >= stepNum ? "bg-primary text-text-main" : "bg-gray-200 dark:bg-gray-700 text-gray-500")">
+                            @if (currentStep > stepNum)
+                            {
+                                <span class="material-symbols-outlined text-[18px]">check</span>
+                            }
+                            else
+                            {
+                                @stepNum
+                            }
+                        </div>
+                        <div>
+                            <p class="font-medium text-sm text-text-main dark:text-white">@GetStepTitle(stepNum)</p>
+                            <p class="text-xs text-text-secondary dark:text-gray-500">@GetStepSubtitle(stepNum)</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        
+        <!-- Step Content -->
+        <div class="p-6 md:p-8">
+            @if (currentStep == 1)
+            {
+                <!-- Step 1: Basic Info -->
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">What skill do you want to learn?</label>
+                        <input @bind="skillModel.Name" 
+                               class="w-full h-12 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white focus:ring-2 focus:ring-primary/50" 
+                               placeholder="e.g., Learn Python Programming, Play Piano, Speak Japanese" />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Category</label>
+                        <select @bind="skillModel.CategoryId" 
+                                class="w-full h-12 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white">
+                            <option value="">Select a category</option>
+                            @foreach (var cat in categories)
+                            {
+                                <option value="@cat.Id">@cat.Name</option>
+                            }
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">What's your big goal? (Optional)</label>
+                        <textarea @bind="skillModel.BigGoal" rows="3"
+                                  class="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white resize-none focus:ring-2 focus:ring-primary/50" 
+                                  placeholder="Describe what you want to achieve..."></textarea>
+                    </div>
+                </div>
+            }
+            else if (currentStep == 2)
+            {
+                <!-- Step 2: Schedule -->
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Target completion date</label>
+                        <input @bind="skillModel.TargetDate" type="date"
+                               class="w-full h-12 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white" />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">How many hours per week can you dedicate?</label>
+                        <div class="flex items-center gap-4">
+                            <input @bind="skillModel.HoursPerWeek" type="range" min="1" max="40" 
+                                   class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary" />
+                            <span class="w-16 text-center font-bold text-text-main dark:text-white">@skillModel.HoursPerWeek h/week</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Visibility</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="visibility" value="private" @onchange="@(() => skillModel.Visibility = "private")" checked="@(skillModel.Visibility == "private")" class="w-4 h-4 text-primary" />
+                                <span class="text-text-main dark:text-white">Private</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="visibility" value="public" @onchange="@(() => skillModel.Visibility = "public")" checked="@(skillModel.Visibility == "public")" class="w-4 h-4 text-primary" />
+                                <span class="text-text-main dark:text-white">Public</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (currentStep == 3)
+            {
+                <!-- Step 3: Review -->
+                <div class="space-y-6">
+                    <div class="bg-background-light dark:bg-background-dark rounded-xl p-6">
+                        <h3 class="font-bold text-lg text-text-main dark:text-white mb-4">Skill Summary</h3>
+                        <dl class="space-y-3">
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary dark:text-gray-400">Name</dt>
+                                <dd class="font-medium text-text-main dark:text-white">@skillModel.Name</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary dark:text-gray-400">Category</dt>
+                                <dd class="font-medium text-text-main dark:text-white">@(categories.FirstOrDefault(c => c.Id == skillModel.CategoryId)?.Name ?? "None")</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary dark:text-gray-400">Target Date</dt>
+                                <dd class="font-medium text-text-main dark:text-white">@(skillModel.TargetDate?.ToString("MMMM dd, yyyy") ?? "Not set")</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary dark:text-gray-400">Weekly Commitment</dt>
+                                <dd class="font-medium text-text-main dark:text-white">@skillModel.HoursPerWeek hours/week</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary dark:text-gray-400">Visibility</dt>
+                                <dd class="font-medium text-text-main dark:text-white capitalize">@skillModel.Visibility</dd>
+                            </div>
+                        </dl>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(skillModel.BigGoal))
+                    {
+                        <div class="bg-background-light dark:bg-background-dark rounded-xl p-6">
+                            <h3 class="font-bold text-lg text-text-main dark:text-white mb-2">Your Goal</h3>
+                            <p class="text-text-secondary dark:text-gray-400">@skillModel.BigGoal</p>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        
+        <!-- Footer Actions -->
+        <div class="flex justify-between items-center p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+            @if (currentStep > 1)
+            {
+                <button @onclick="PreviousStep" class="flex items-center gap-2 px-6 h-11 text-text-secondary hover:text-text-main dark:text-gray-400 dark:hover:text-white font-medium transition-colors">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Back
+                </button>
+            }
+            else
+            {
+                <a href="/skills" class="flex items-center gap-2 px-6 h-11 text-text-secondary hover:text-text-main dark:text-gray-400 dark:hover:text-white font-medium transition-colors">
+                    Cancel
+                </a>
+            }
+            
+            @if (currentStep < 3)
+            {
+                <button @onclick="NextStep" disabled="@(!CanProceed)" 
+                        class="flex items-center gap-2 px-8 h-11 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    Next
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                </button>
+            }
+            else
+            {
+                <button @onclick="CreateSkill" disabled="@isSubmitting" 
+                        class="flex items-center gap-2 px-8 h-11 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-all disabled:opacity-50">
+                    @if (isSubmitting)
+                    {
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-text-main"></div>
+                        <span>Creating...</span>
+                    }
+                    else
+                    {
+                        <span class="material-symbols-outlined">check</span>
+                        <span>Create Skill</span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private int currentStep = 1;
+    private List<CategoryDto> categories = new();
+    private SkillFormModel skillModel = new();
+    private bool isSubmitting;
+    private string? errorMessage;
+    private int userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("userId")?.Value;
+        int.TryParse(userIdClaim, out userId);
+        
+        categories = await SkillService.GetCategoriesAsync();
+    }
+
+    private bool CanProceed => currentStep switch
+    {
+        1 => !string.IsNullOrWhiteSpace(skillModel.Name),
+        2 => true,
+        _ => true
+    };
+
+    private void NextStep()
+    {
+        if (currentStep < 3 && CanProceed)
+            currentStep++;
+    }
+
+    private void PreviousStep()
+    {
+        if (currentStep > 1)
+            currentStep--;
+    }
+
+    private async Task CreateSkill()
+    {
+        if (isSubmitting || userId <= 0) return;
+        
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var request = new CreateSkillRequest
+            {
+                Name = skillModel.Name,
+                Description = skillModel.BigGoal,
+                BigGoal = skillModel.BigGoal,
+                CategoryId = skillModel.CategoryId,
+                TargetDate = skillModel.TargetDate,
+                Visibility = skillModel.Visibility
+            };
+
+            var result = await SkillService.CreateSkillAsync(userId, request);
+            
+            if (result != null)
+            {
+                Navigation.NavigateTo($"/skills/{result.Id}");
+            }
+            else
+            {
+                errorMessage = "Failed to create skill. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private string GetStepTitle(int step) => step switch
+    {
+        1 => "Basic Info",
+        2 => "Schedule",
+        3 => "Review",
+        _ => ""
+    };
+
+    private string GetStepSubtitle(int step) => step switch
+    {
+        1 => "Define your skill",
+        2 => "Set your commitment",
+        3 => "Confirm details",
+        _ => ""
+    };
+
+    public class SkillFormModel
+    {
+        public string Name { get; set; } = "";
+        public string? BigGoal { get; set; }
+        public int? CategoryId { get; set; }
+        public DateTime? TargetDate { get; set; }
+        public int HoursPerWeek { get; set; } = 5;
+        public string Visibility { get; set; } = "private";
+    }
+}

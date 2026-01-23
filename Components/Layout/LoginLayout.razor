@@ -1,0 +1,11 @@
+@inherits LayoutComponentBase
+
+<!-- Background Pattern -->
+<div class="fixed inset-0 opacity-30 pointer-events-none">
+    <div class="absolute top-20 left-20 w-72 h-72 bg-primary/20 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-20 right-20 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl"></div>
+</div>
+
+<div class="bg-gradient-to-br from-[#f0fdfc] to-[#e0f2fe] dark:from-gray-900 dark:to-gray-800 min-h-screen flex flex-col items-center justify-center p-4 font-display">
+    @Body
+</div>

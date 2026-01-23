@@ -17,6 +17,9 @@
     <!-- Authentication & Security -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
+    
+    <!-- Blazor Authentication -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.0" />
   </ItemGroup>
 
 </Project>
