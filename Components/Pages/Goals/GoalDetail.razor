@@ -1,0 +1,259 @@
+@page "/goals/{Id:int}"
+@attribute [Authorize]
+@inject IGoalService GoalService
+@inject IProgressLogService ProgressLogService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>@(goal?.Title ?? "Goal Detail") - SkillTracker</PageTitle>
+
+@if (isLoading)
+{
+    <div class="flex items-center justify-center min-h-[60vh]">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+}
+else if (goal == null)
+{
+    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <span class="material-symbols-outlined text-6xl text-gray-400 mb-4">error</span>
+        <h1 class="text-2xl font-bold text-text-main dark:text-white mb-2">Goal not found</h1>
+        <p class="text-text-secondary dark:text-gray-400 mb-6">The goal you're looking for doesn't exist or you don't have access.</p>
+        <a href="/skills" class="px-6 py-3 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-colors">
+            Back to Skills
+        </a>
+    </div>
+}
+else
+{
+    <div class="max-w-6xl mx-auto space-y-8">
+        <!-- Breadcrumbs & Heading -->
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div class="space-y-2">
+                <nav class="flex items-center text-sm font-medium text-text-secondary dark:text-gray-400">
+                    <a href="/" class="hover:text-text-main dark:hover:text-white transition-colors">Dashboard</a>
+                    <span class="mx-2 text-gray-300">/</span>
+                    <a href="/skills/@goal.SkillId" class="hover:text-text-main dark:hover:text-white transition-colors">@goal.SkillName</a>
+                    <span class="mx-2 text-gray-300">/</span>
+                    <span class="text-primary font-semibold">@goal.Title</span>
+                </nav>
+                <div class="flex items-baseline gap-4">
+                    <h1 class="text-3xl md:text-4xl font-black text-text-main dark:text-white tracking-tight">@goal.Title</h1>
+                    <span class="px-2.5 py-0.5 rounded-full @GetStatusColor(goal.Status) text-xs font-bold uppercase tracking-wide">
+                        @GetStatusLabel(goal.Status)
+                    </span>
+                </div>
+                @if (!string.IsNullOrEmpty(goal.Description))
+                {
+                    <p class="text-text-secondary dark:text-gray-400 max-w-xl">@goal.Description</p>
+                }
+            </div>
+            <div class="flex gap-2">
+                <a href="/progress/log?goalId=@goal.Id&skillId=@goal.SkillId" 
+                   class="flex items-center gap-2 px-4 py-2 bg-primary text-text-main rounded-lg text-sm font-bold shadow-md shadow-primary/20 hover:bg-primary-dark transition-all">
+                    <span class="material-symbols-outlined text-[20px]">add</span>
+                    Log Progress
+                </a>
+                <button class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-text-main dark:text-white bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-all">
+                    <span class="material-symbols-outlined text-[20px]">edit</span>
+                    Edit Goal
+                </button>
+            </div>
+        </div>
+
+        <!-- Bento Box Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Progress Gauge Card -->
+            <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <span class="material-symbols-outlined text-9xl">data_usage</span>
+                </div>
+                <h3 class="text-text-secondary dark:text-gray-400 font-medium text-sm absolute top-6 left-6">Goal Completion</h3>
+                <div class="relative size-48 mt-4">
+                    <svg class="size-full -rotate-90 transform" viewBox="0 0 100 100">
+                        <circle class="text-gray-100 dark:text-gray-800" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+                        <circle class="text-primary" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" 
+                                stroke-dasharray="251" stroke-dashoffset="@(251 - (251 * goal.ProgressPercentage / 100))" 
+                                stroke-linecap="round" stroke-width="8"></circle>
+                    </svg>
+                    <div class="absolute top-0 left-0 size-full flex flex-col items-center justify-center">
+                        <span class="text-4xl font-black text-text-main dark:text-white tracking-tighter">@Math.Round(goal.ProgressPercentage)%</span>
+                        <span class="text-xs text-text-secondary dark:text-gray-400 font-medium uppercase mt-1">Achieved</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="text-lg font-bold text-text-main dark:text-white">@Math.Round(goal.LoggedHours, 1)</span>
+                    <span class="text-text-secondary dark:text-gray-400">/</span>
+                    <span class="text-text-secondary dark:text-gray-400">@(goal.TargetHours ?? 0) hrs target</span>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="lg:col-span-2 grid grid-cols-2 gap-4">
+                <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <span class="material-symbols-outlined">schedule</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-text-main dark:text-white">@Math.Round(goal.LoggedHours, 1)h</p>
+                            <p class="text-xs text-text-secondary dark:text-gray-500">Hours Logged</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/20 flex items-center justify-center text-green-600 dark:text-green-400">
+                            <span class="material-symbols-outlined">check_circle</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-text-main dark:text-white">@goal.CompletedMilestonesCount/@goal.MilestonesCount</p>
+                            <p class="text-xs text-text-secondary dark:text-gray-500">Milestones Done</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                            <span class="material-symbols-outlined">calendar_today</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-text-main dark:text-white">@(goal.TargetDate?.ToString("MMM dd") ?? "No date")</p>
+                            <p class="text-xs text-text-secondary dark:text-gray-500">Target Date</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                            <span class="material-symbols-outlined">@(goal.IsAiGenerated ? "smart_toy" : "person")</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-text-main dark:text-white">@(goal.IsAiGenerated ? "AI" : "Manual")</p>
+                            <p class="text-xs text-text-secondary dark:text-gray-500">Created By</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Milestones Section -->
+        @if (goal.Milestones.Any())
+        {
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold text-text-main dark:text-white">Milestones</h2>
+                    <span class="text-sm text-text-secondary dark:text-gray-400">
+                        @goal.CompletedMilestonesCount of @goal.MilestonesCount completed
+                    </span>
+                </div>
+                <div class="space-y-3">
+                    @foreach (var milestone in goal.Milestones)
+                    {
+                        <div class="flex items-center gap-4 p-4 rounded-xl @(milestone.IsCompleted ? "bg-green-50 dark:bg-green-900/10" : "bg-gray-50 dark:bg-gray-800/50")">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center @(milestone.IsCompleted ? "bg-green-100 dark:bg-green-900/30 text-green-600" : "bg-gray-200 dark:bg-gray-700 text-gray-400")">
+                                <span class="material-symbols-outlined text-[18px]">@(milestone.IsCompleted ? "check" : "circle")</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-medium text-text-main dark:text-white @(milestone.IsCompleted ? "line-through opacity-60" : "")">@milestone.Title</p>
+                                @if (!string.IsNullOrEmpty(milestone.Description))
+                                {
+                                    <p class="text-sm text-text-secondary dark:text-gray-500">@milestone.Description</p>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(milestone.Category))
+                            {
+                                <span class="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-text-secondary dark:text-gray-400">@milestone.Category</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Recent Logs -->
+        <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+                <h2 class="text-xl font-bold text-text-main dark:text-white">Progress Logs</h2>
+                <a href="/progress/log?goalId=@goal.Id&skillId=@goal.SkillId" 
+                   class="flex items-center gap-2 px-4 py-2 bg-primary text-text-main rounded-lg text-sm font-bold hover:bg-primary-dark transition-all">
+                    <span class="material-symbols-outlined text-[18px]">add</span>
+                    Add Log
+                </a>
+            </div>
+            @if (recentLogs.Any())
+            {
+                <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @foreach (var log in recentLogs)
+                    {
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium text-text-main dark:text-white">@(log.Title ?? "Progress logged")</p>
+                                    <p class="text-sm text-text-secondary dark:text-gray-500">@log.LogDate.ToString("MMMM dd, yyyy")</p>
+                                </div>
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    +@log.HoursLogged hrs
+                                </span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(log.Description))
+                            {
+                                <p class="mt-2 text-sm text-text-secondary dark:text-gray-400 line-clamp-2">@log.Description</p>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="p-8 text-center">
+                    <span class="material-symbols-outlined text-4xl text-gray-400 mb-2">history</span>
+                    <p class="text-text-secondary dark:text-gray-400">No progress logged yet</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    
+    private GoalDto? goal;
+    private List<ProgressLogDto> recentLogs = new();
+    private bool isLoading = true;
+    private int userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("userId")?.Value;
+        
+        if (int.TryParse(userIdClaim, out userId) && userId > 0)
+        {
+            goal = await GoalService.GetGoalByIdAsync(Id, userId);
+            if (goal != null)
+            {
+                var logsResponse = await ProgressLogService.GetUserLogsAsync(userId, 1, 10, goalId: Id);
+                recentLogs = logsResponse.Items;
+            }
+        }
+        
+        isLoading = false;
+    }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "completed" => "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+        "in_progress" => "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
+        "pending" => "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
+        _ => "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+    };
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "completed" => "Completed",
+        "in_progress" => "In Progress",
+        "pending" => "Pending",
+        _ => status
+    };
+}
