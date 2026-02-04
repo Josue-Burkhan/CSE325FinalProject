@@ -1,0 +1,109 @@
+@* Toast notification component *@
+
+@if (isVisible)
+{
+    <div class="fixed top-4 right-4 z-[100] animate-slide-in">
+        <div class="@GetToastClass() rounded-lg shadow-xl p-4 min-w-[320px] max-w-md flex items-start gap-3">
+            <span class="material-symbols-outlined text-2xl @GetIconClass()">@GetIcon()</span>
+            <div class="flex-1">
+                <p class="font-semibold text-sm">@Title</p>
+                @if (!string.IsNullOrEmpty(Message))
+                {
+                    <p class="text-sm opacity-90 mt-1">@Message</p>
+                }
+            </div>
+            <button @onclick="Hide" class="opacity-70 hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes slide-in {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    .animate-slide-in {
+        animation: slide-in 0.3s ease-out;
+    }
+</style>
+
+@code {
+    private bool isVisible = false;
+    private System.Timers.Timer? autoHideTimer;
+    
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public ToastType Type { get; set; } = ToastType.Info;
+    [Parameter] public int DurationMs { get; set; } = 3000;
+    
+    public enum ToastType { Success, Error, Warning, Info }
+    
+    public void Show(string title, string message = "", ToastType type = ToastType.Info, int durationMs = 3000)
+    {
+        Title = title;
+        Message = message;
+        Type = type;
+        DurationMs = durationMs;
+        isVisible = true;
+        
+        // Auto-hide timer
+        autoHideTimer?.Dispose();
+        autoHideTimer = new System.Timers.Timer(durationMs);
+        autoHideTimer.Elapsed += (s, e) => 
+        {
+            autoHideTimer?.Dispose();
+            InvokeAsync(() => { isVisible = false; StateHasChanged(); });
+        };
+        autoHideTimer.AutoReset = false;
+        autoHideTimer.Start();
+        
+        StateHasChanged();
+    }
+    
+    public void Hide()
+    {
+        autoHideTimer?.Dispose();
+        isVisible = false;
+        StateHasChanged();
+    }
+    
+    private string GetToastClass() => Type switch
+    {
+        ToastType.Success => "bg-green-600 text-white",
+        ToastType.Error => "bg-red-600 text-white",
+        ToastType.Warning => "bg-yellow-500 text-black",
+        ToastType.Info => "bg-blue-600 text-white",
+        _ => "bg-gray-800 text-white"
+    };
+    
+    private string GetIconClass() => Type switch
+    {
+        ToastType.Success => "text-green-200",
+        ToastType.Error => "text-red-200",
+        ToastType.Warning => "text-yellow-900",
+        ToastType.Info => "text-blue-200",
+        _ => "text-gray-300"
+    };
+    
+    private string GetIcon() => Type switch
+    {
+        ToastType.Success => "check_circle",
+        ToastType.Error => "error",
+        ToastType.Warning => "warning",
+        ToastType.Info => "info",
+        _ => "info"
+    };
+    
+    public void Dispose()
+    {
+        autoHideTimer?.Dispose();
+    }
+}

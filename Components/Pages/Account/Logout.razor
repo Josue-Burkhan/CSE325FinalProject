@@ -1,5 +1,6 @@
 @page "/account/logout"
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 @inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Logging out...</PageTitle>
@@ -14,15 +15,29 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
-        // Clear cookies - this needs to be done server-side
-        var context = HttpContextAccessor.HttpContext;
-        if (context != null)
+        try
         {
-            context.Response.Cookies.Delete("accessToken");
-            context.Response.Cookies.Delete("refreshToken");
+            // Use JS Interop to call the logout API which clears cookies
+            await JS.InvokeVoidAsync("auth.logout");
         }
-        
-        await Task.Delay(500);
-        Navigation.NavigateTo("/login", forceLoad: true);
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logout error: {ex.Message}");
+            // Even if API fails, try to redirect
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
     }
 }
+
+<script>
+    if (!window.auth) window.auth = {};
+    window.auth.logout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login';
+        } catch (e) {
+            console.error(e);
+            window.location.href = '/login';
+        }
+    };
+</script>

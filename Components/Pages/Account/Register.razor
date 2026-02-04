@@ -1,10 +1,14 @@
 @page "/account/register"
 @page "/register"
 @layout LoginLayout
-@inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject IAuthService AuthService
 
 <PageTitle>Create Account - SkillTracker</PageTitle>
+
+<!-- Toast Notification -->
+<Toast @ref="toast" />
 
 <div class="relative z-10 w-full max-w-[520px] bg-white dark:bg-surface-dark rounded-2xl shadow-soft p-8 md:p-12 overflow-hidden border border-[#e8efef] dark:border-[#2a4a47]">
     <!-- Logo -->
@@ -20,6 +24,7 @@
         <p class="text-gray-500 dark:text-gray-400 mt-2">Start tracking your skills and achievements</p>
     </div>
     
+
     <!-- Error Message -->
     @if (!string.IsNullOrEmpty(errorMessage))
     {
@@ -36,10 +41,8 @@
         </div>
     }
     
-    <!-- Form -->
-    <EditForm Model="registerModel" OnValidSubmit="HandleRegister" class="space-y-4 mt-6">
-        <DataAnnotationsValidator />
-        
+    <!-- Form - Using button onclick instead of form submit -->
+    <div class="space-y-4 mt-6">
         <div class="grid grid-cols-2 gap-4">
             <div class="block">
                 <span class="block text-[#1b3230] dark:text-[#e0eaea] text-sm font-semibold mb-2 ml-1">First Name</span>
@@ -47,11 +50,14 @@
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-gray-400 text-[20px]">person</span>
                     </div>
-                    <InputText @bind-Value="registerModel.FirstName" 
+                    <input @bind="firstName" @bind:event="oninput" type="text"
                         class="w-full bg-white dark:bg-[#1b3230] border border-[#dce5e4] dark:border-[#385f5b] rounded-lg pl-10 pr-4 py-3 text-[#1b3230] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" 
                         placeholder="John" />
                 </div>
-                <ValidationMessage For="@(() => registerModel.FirstName)" class="text-red-500 text-xs mt-1" />
+                @if (showValidation && string.IsNullOrWhiteSpace(firstName))
+                {
+                    <span class="text-red-500 text-xs mt-1 block">First name is required</span>
+                }
             </div>
             
             <div class="block">
@@ -60,11 +66,14 @@
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-gray-400 text-[20px]">badge</span>
                     </div>
-                    <InputText @bind-Value="registerModel.LastName" 
+                    <input @bind="lastName" @bind:event="oninput" type="text"
                         class="w-full bg-white dark:bg-[#1b3230] border border-[#dce5e4] dark:border-[#385f5b] rounded-lg pl-10 pr-4 py-3 text-[#1b3230] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" 
                         placeholder="Doe" />
                 </div>
-                <ValidationMessage For="@(() => registerModel.LastName)" class="text-red-500 text-xs mt-1" />
+                @if (showValidation && string.IsNullOrWhiteSpace(lastName))
+                {
+                    <span class="text-red-500 text-xs mt-1 block">Last name is required</span>
+                }
             </div>
         </div>
         
@@ -74,11 +83,14 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span class="material-symbols-outlined text-gray-400 text-[20px]">mail</span>
                 </div>
-                <InputText @bind-Value="registerModel.Email" type="email"
+                <input @bind="email" @bind:event="oninput" type="email"
                     class="w-full bg-white dark:bg-[#1b3230] border border-[#dce5e4] dark:border-[#385f5b] rounded-lg pl-10 pr-4 py-3 text-[#1b3230] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" 
                     placeholder="name@example.com" />
             </div>
-            <ValidationMessage For="@(() => registerModel.Email)" class="text-red-500 text-xs mt-1" />
+            @if (showValidation && string.IsNullOrWhiteSpace(email))
+            {
+                <span class="text-red-500 text-xs mt-1 block">Email is required</span>
+            }
         </div>
         
         <div class="block">
@@ -87,11 +99,18 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span class="material-symbols-outlined text-gray-400 text-[20px]">lock</span>
                 </div>
-                <InputText @bind-Value="registerModel.Password" type="password"
+                <input @bind="password" @bind:event="oninput" type="password"
                     class="w-full bg-white dark:bg-[#1b3230] border border-[#dce5e4] dark:border-[#385f5b] rounded-lg pl-10 pr-4 py-3 text-[#1b3230] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" 
                     placeholder="At least 8 characters" />
             </div>
-            <ValidationMessage For="@(() => registerModel.Password)" class="text-red-500 text-xs mt-1" />
+            @if (showValidation && string.IsNullOrWhiteSpace(password))
+            {
+                <span class="text-red-500 text-xs mt-1 block">Password is required</span>
+            }
+            else if (showValidation && password.Length < 8)
+            {
+                <span class="text-red-500 text-xs mt-1 block">Password must be at least 8 characters</span>
+            }
             <!-- Password strength indicator -->
             <div class="mt-2 flex gap-1">
                 @for (int i = 0; i < 4; i++)
@@ -109,7 +128,7 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span class="material-symbols-outlined text-gray-400 text-[20px]">lock_open</span>
                 </div>
-                <InputText @bind-Value="registerModel.ConfirmPassword" type="password"
+                <input @bind="confirmPassword" @bind:event="oninput" type="password"
                     class="w-full bg-white dark:bg-[#1b3230] border border-[#dce5e4] dark:border-[#385f5b] rounded-lg pl-10 pr-4 py-3 text-[#1b3230] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" 
                     placeholder="Repeat your password" />
                 @if (PasswordsMatch())
@@ -119,18 +138,24 @@
                     </div>
                 }
             </div>
-            <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-red-500 text-xs mt-1" />
+            @if (showValidation && password != confirmPassword)
+            {
+                <span class="text-red-500 text-xs mt-1 block">Passwords do not match</span>
+            }
         </div>
 
         <div class="flex items-start gap-2 mt-4">
-            <InputCheckbox @bind-Value="registerModel.AcceptTerms" class="w-4 h-4 mt-0.5 text-primary rounded focus:ring-primary" />
+            <input @bind="acceptTerms" type="checkbox" class="w-4 h-4 mt-0.5 text-primary rounded focus:ring-primary" />
             <label class="text-sm text-gray-600 dark:text-gray-400">
                 I agree to the <a href="#" class="text-primary hover:underline">Terms of Service</a> and <a href="#" class="text-primary hover:underline">Privacy Policy</a>
             </label>
         </div>
-        <ValidationMessage For="@(() => registerModel.AcceptTerms)" class="text-red-500 text-xs" />
+        @if (showValidation && !acceptTerms)
+        {
+            <span class="text-red-500 text-xs block">You must accept the terms</span>
+        }
         
-        <button type="submit" disabled="@isLoading" 
+        <button type="button" @onclick="HandleRegister" disabled="@isLoading" 
             class="w-full bg-primary hover:bg-primary-dark text-[#1b3230] dark:text-[#0f1f1d] font-bold rounded-lg h-12 mt-4 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed">
             @if (isLoading)
             {
@@ -146,7 +171,7 @@
                 <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
             }
         </button>
-    </EditForm>
+    </div>
 
     <!-- Sign In Link -->
     <p class="text-center mt-6 text-gray-500 dark:text-gray-400 text-sm">
@@ -158,73 +183,92 @@
 <p class="mt-8 text-gray-400 text-sm">© 2026 SkillTracker. All rights reserved.</p>
 
 @code {
-    private RegisterModel registerModel = new();
+    private Toast? toast;
+    
+    private string firstName = "";
+    private string lastName = "";
+    private string email = "";
+    private string password = "";
+    private string confirmPassword = "";
+    private bool acceptTerms = false;
+    
     private string? errorMessage;
     private string? successMessage;
     private bool isLoading;
+    private bool showValidation = false;
 
     private async Task HandleRegister()
     {
         errorMessage = null;
         successMessage = null;
+        showValidation = true;
+        StateHasChanged();
         
-        if (registerModel.Password != registerModel.ConfirmPassword)
+        // Validate
+        if (string.IsNullOrWhiteSpace(firstName) || 
+            string.IsNullOrWhiteSpace(lastName) || 
+            string.IsNullOrWhiteSpace(email) || 
+            string.IsNullOrWhiteSpace(password) ||
+            password.Length < 8 ||
+            password != confirmPassword ||
+            !acceptTerms)
         {
-            errorMessage = "Passwords do not match";
-            return;
-        }
-        
-        if (!registerModel.AcceptTerms)
-        {
-            errorMessage = "Please accept the Terms of Service";
+            toast?.Show("Validation Error", "Please fill in all required fields correctly.", Toast.ToastType.Error);
             return;
         }
 
         isLoading = true;
+        StateHasChanged();
 
         try
         {
+            // Call the AuthService directly (server-side)
             var result = await AuthService.RegisterAsync(new CSE325FinalProject.Models.DTOs.RegisterRequest
             {
-                FirstName = registerModel.FirstName,
-                LastName = registerModel.LastName,
-                Email = registerModel.Email,
-                Password = registerModel.Password,
-                ConfirmPassword = registerModel.ConfirmPassword
+                FirstName = firstName,
+                LastName = lastName,
+                Email = email,
+                Password = password,
+                ConfirmPassword = confirmPassword
             });
-
+            
             if (result.Success)
             {
-                successMessage = "Account created successfully! Redirecting to login...";
-                await Task.Delay(1500);
-                Navigation.NavigateTo("/login");
+                successMessage = "Account created successfully!";
+                toast?.Show("Success!", "Account created successfully! Redirecting to login...", Toast.ToastType.Success);
+                StateHasChanged();
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/login?registered=true", forceLoad: true);
             }
             else
             {
                 errorMessage = result.Message ?? "Registration failed. Please try again.";
+                toast?.Show("Registration Failed", errorMessage, Toast.ToastType.Error, 5000);
             }
         }
         catch (Exception ex)
         {
-            errorMessage = "An error occurred. Please try again.";
-            Console.WriteLine($"Register error: {ex.Message}");
+            errorMessage = $"Error: {ex.Message}";
+            toast?.Show("Error", ex.Message, Toast.ToastType.Error, 5000);
+            Console.WriteLine($"Register error: {ex}");
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
 
     private int GetPasswordStrength()
     {
-        var password = registerModel.Password ?? "";
+        var pwd = password ?? "";
         int strength = 0;
         
-        if (password.Length >= 8) strength++;
-        if (System.Text.RegularExpressions.Regex.IsMatch(password, "[a-z]") && 
-            System.Text.RegularExpressions.Regex.IsMatch(password, "[A-Z]")) strength++;
-        if (System.Text.RegularExpressions.Regex.IsMatch(password, @"\d")) strength++;
-        if (System.Text.RegularExpressions.Regex.IsMatch(password, @"[^a-zA-Z\d]")) strength++;
+        if (pwd.Length >= 8) strength++;
+        if (System.Text.RegularExpressions.Regex.IsMatch(pwd, "[a-z]") && 
+            System.Text.RegularExpressions.Regex.IsMatch(pwd, "[A-Z]")) strength++;
+        if (System.Text.RegularExpressions.Regex.IsMatch(pwd, @"\d")) strength++;
+        if (System.Text.RegularExpressions.Regex.IsMatch(pwd, @"[^a-zA-Z\d]")) strength++;
         
         return strength;
     }
@@ -240,8 +284,8 @@
 
     private string GetPasswordHint()
     {
-        var password = registerModel.Password ?? "";
-        if (string.IsNullOrEmpty(password)) return "Use at least 8 characters with letters and numbers";
+        var pwd = password ?? "";
+        if (string.IsNullOrEmpty(pwd)) return "Use at least 8 characters with letters and numbers";
         var strength = GetPasswordStrength();
         return strength switch
         {
@@ -255,31 +299,6 @@
 
     private bool PasswordsMatch()
     {
-        return !string.IsNullOrEmpty(registerModel.ConfirmPassword) && 
-               registerModel.Password == registerModel.ConfirmPassword;
-    }
-
-    public class RegisterModel
-    {
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "First name is required")]
-        public string FirstName { get; set; } = "";
-
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Last name is required")]
-        public string LastName { get; set; } = "";
-
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email is required")]
-        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Invalid email address")]
-        public string Email { get; set; } = "";
-
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Password is required")]
-        [System.ComponentModel.DataAnnotations.MinLength(8, ErrorMessage = "Password must be at least 8 characters")]
-        public string Password { get; set; } = "";
-
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Please confirm your password")]
-        [System.ComponentModel.DataAnnotations.Compare("Password", ErrorMessage = "Passwords do not match")]
-        public string ConfirmPassword { get; set; } = "";
-
-        [System.ComponentModel.DataAnnotations.Range(typeof(bool), "true", "true", ErrorMessage = "You must accept the terms")]
-        public bool AcceptTerms { get; set; }
+        return !string.IsNullOrEmpty(confirmPassword) && password == confirmPassword;
     }
 }

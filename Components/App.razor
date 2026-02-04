@@ -78,17 +78,21 @@
     <HeadOutlet />
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark min-h-screen antialiased">
-    <Routes />
+    <Routes @rendermode="RenderModeForPage" />
     
     <script src="_framework/blazor.web.js"></script>
     
     <!-- Theme Toggle Script -->
     <script>
-        // Check for saved theme preference or default to light
-        if (localStorage.getItem('theme') === 'dark' || 
-            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        // Check for saved theme preference, otherwise DEFAULT to light (ignore system preference)
+        if (localStorage.getItem('theme') === 'dark') {
             document.documentElement.classList.add('dark');
             document.documentElement.classList.remove('light');
+        } else {
+            // Force light mode default
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+            localStorage.setItem('theme', 'light');
         }
         
         window.toggleTheme = function() {
@@ -106,3 +110,8 @@
     </script>
 </body>
 </html>
+
+@code {
+    private static IComponentRenderMode RenderModeForPage => 
+        new InteractiveServerRenderMode(prerender: true);
+}
