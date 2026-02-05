@@ -3,7 +3,10 @@
 @inject ISkillService SkillService
 @inject AuthenticationStateProvider AuthStateProvider
 
+@inject IJSRuntime JS
+
 <PageTitle>My Skills - SkillTracker</PageTitle>
+<Toast @ref="toast" />
 
 <div class="max-w-[1400px] mx-auto flex flex-col gap-8">
     <!-- Header -->
@@ -68,7 +71,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             @foreach (var skill in filteredSkills)
             {
-                <SkillCard Skill="skill" />
+                <SkillCard Skill="skill" OnDelete="HandleDeleteSkill" />
             }
         </div>
     }
@@ -82,6 +85,7 @@
     private string categoryFilter = "";
     private bool isLoading = true;
     private int userId;
+    private Toast? toast;
 
     private IEnumerable<SkillDto> filteredSkills => skills
         .Where(s => string.IsNullOrEmpty(searchTerm) || s.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
@@ -89,6 +93,11 @@
         .Where(s => string.IsNullOrEmpty(categoryFilter) || s.Category?.Id.ToString() == categoryFilter);
 
     protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+    
+    private async Task LoadData()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var userIdClaim = authState.User.FindFirst("userId")?.Value;
@@ -100,5 +109,21 @@
         }
         
         isLoading = false;
+    }
+    
+    private async Task HandleDeleteSkill(int skillId)
+    {
+        var success = await SkillService.DeleteSkillAsync(skillId, userId);
+        
+        if (success)
+        {
+            skills.RemoveAll(s => s.Id == skillId);
+            toast?.Show("Success", "Skill deleted successfully.", Toast.ToastType.Success);
+            StateHasChanged();
+        }
+        else
+        {
+            toast?.Show("Error", "Failed to delete skill. Please try again.", Toast.ToastType.Error);
+        }
     }
 }

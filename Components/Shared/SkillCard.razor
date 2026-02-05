@@ -1,49 +1,110 @@
-@* Skill Card Component *@
+@inject ISkillService SkillService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<a href="/skills/@Skill.Id" 
-   class="skill-card cursor-pointer group bg-surface-light dark:bg-surface-dark rounded-2xl p-6 shadow-soft hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-black/30 border border-gray-100 dark:border-gray-800 transition-all duration-300 hover:-translate-y-1 relative overflow-hidden block"
-   data-visibility="@Skill.Visibility"
-   data-name="@Skill.Name.ToLower()">
-    <div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
-    <div class="flex justify-between items-start mb-4">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg @GetColorBgClass() flex items-center justify-center @GetColorTextClass()">
-                <span class="material-symbols-outlined">@(Skill.Icon ?? "school")</span>
+<div class="relative group">
+    <a href="/skills/@Skill.Id" 
+       class="skill-card cursor-pointer bg-surface-light dark:bg-surface-dark rounded-2xl p-6 shadow-soft hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-black/30 border border-gray-100 dark:border-gray-800 transition-all duration-300 hover:-translate-y-1 block relative z-0"
+       data-visibility="@Skill.Visibility"
+       data-name="@Skill.Name.ToLower()">
+        
+        <!-- Hover Highlight Bar -->
+        <div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity rounded-l-2xl"></div>
+        
+        <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg @GetColorBgClass() flex items-center justify-center @GetColorTextClass()">
+                    <span class="material-symbols-outlined">@(Skill.Icon ?? "school")</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-text-main dark:text-white text-base">@Skill.Name</h3>
+                    <span class="text-xs text-text-secondary dark:text-gray-500">@(Skill.Category?.Name ?? "Uncategorized")</span>
+                </div>
             </div>
-            <div>
-                <h3 class="font-bold text-text-main dark:text-white text-base">@Skill.Name</h3>
-                <span class="text-xs text-text-secondary dark:text-gray-500">@(Skill.Category?.Name ?? "Uncategorized")</span>
+            
+            <div class="relative z-20">
+                <button @onclick="ToggleMenu" @onclick:preventDefault @onclick:stopPropagation 
+                        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-text-secondary transition-colors">
+                    <span class="material-symbols-outlined">more_vert</span>
+                </button>
+                
+                @if (showMenu)
+                {
+                    <div class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-surface-dark rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-30 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                        <button @onclick="NavigateToEdit" @onclick:preventDefault @onclick:stopPropagation class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                            Edit
+                        </button>
+                        <button @onclick="DeleteSkill" @onclick:preventDefault @onclick:stopPropagation class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                            Delete
+                        </button>
+                    </div>
+                }
+                
+                @if (showMenu) 
+                {
+                    <div class="fixed inset-0 z-10 bg-transparent" @onclick="CloseMenu" @onclick:preventDefault @onclick:stopPropagation></div>
+                }
             </div>
         </div>
-        <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-text-secondary transition-colors" @onclick:stopPropagation>
-            <span class="material-symbols-outlined">more_vert</span>
-        </button>
-    </div>
-    <p class="text-sm text-text-secondary dark:text-gray-400 mb-6 line-clamp-2 leading-relaxed">
-        @(string.IsNullOrEmpty(Skill.Description) ? (string.IsNullOrEmpty(Skill.BigGoal) ? "No description yet" : Skill.BigGoal) : Skill.Description)
-    </p>
-    <div class="flex flex-col gap-2">
-        <div class="flex justify-between items-center text-xs font-semibold mb-1">
-            <div class="flex items-center gap-1.5 @(Skill.Visibility == "public" ? "text-primary-dark dark:text-primary" : "text-text-secondary dark:text-gray-500")">
-                <span class="material-symbols-outlined text-[16px]">@(Skill.Visibility == "public" ? "visibility" : "lock")</span>
-                <span>@(char.ToUpper(Skill.Visibility[0]) + Skill.Visibility.Substring(1))</span>
+        
+        <p class="text-sm text-text-secondary dark:text-gray-400 mb-6 line-clamp-2 leading-relaxed">
+            @(string.IsNullOrEmpty(Skill.Description) ? (string.IsNullOrEmpty(Skill.BigGoal) ? "No description yet" : Skill.BigGoal) : Skill.Description)
+        </p>
+        
+        <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-center text-xs font-semibold mb-1">
+                <div class="flex items-center gap-1.5 @(Skill.Visibility == "public" ? "text-primary-dark dark:text-primary" : "text-text-secondary dark:text-gray-500")">
+                    <span class="material-symbols-outlined text-[16px]">@(Skill.Visibility == "public" ? "visibility" : "lock")</span>
+                    <span>@(char.ToUpper(Skill.Visibility[0]) + Skill.Visibility.Substring(1))</span>
+                </div>
+                <span class="text-text-main dark:text-white">@Math.Round(ProgressPercent)% Mastery</span>
             </div>
-            <span class="text-text-main dark:text-white">@Math.Round(ProgressPercent)% Mastery</span>
-        </div>
-        <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
-            <div class="bg-primary h-2.5 rounded-full transition-all duration-1000 ease-out relative overflow-hidden" style="width: @ProgressPercent%">
-                <div class="absolute inset-0 bg-white/20 w-full h-full animate-shimmer"></div>
+            <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                <div class="bg-primary h-2.5 rounded-full transition-all duration-1000 ease-out relative overflow-hidden" style="width: @ProgressPercent%">
+                    <div class="absolute inset-0 bg-white/20 w-full h-full animate-shimmer"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-text-secondary dark:text-gray-500 mt-2">
+                <span>@Skill.GoalsCount goal@(Skill.GoalsCount != 1 ? "s" : "")</span>
+                <span>@Math.Round(Skill.TotalHoursLogged, 1)h logged</span>
             </div>
         </div>
-        <div class="flex items-center justify-between text-xs text-text-secondary dark:text-gray-500 mt-2">
-            <span>@Skill.GoalsCount goal@(Skill.GoalsCount != 1 ? "s" : "")</span>
-            <span>@Math.Round(Skill.TotalHoursLogged, 1)h logged</span>
-        </div>
-    </div>
-</a>
+    </a>
+</div>
 
 @code {
     [Parameter, EditorRequired] public SkillDto Skill { get; set; } = null!;
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    
+    private bool showMenu = false;
+
+    private void ToggleMenu() => showMenu = !showMenu;
+    private void CloseMenu() => showMenu = false;
+
+    private void NavigateToEdit()
+    {
+        CloseMenu();
+        Navigation.NavigateTo($"/skills/edit/{Skill.Id}");
+    }
+
+    private async Task DeleteSkill()
+    {
+        CloseMenu();
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Skill.Name}'? This cannot be undone.");
+        
+        if (confirmed)
+        {
+            // We assume successful delete if parent handles it, or call service here and notify parent
+            // Calling service here is better for encapsulation if we have the ID and service
+            // However, we need the UserID. 
+            // Better to let the parent handle the actual delete via callback, OR get userId here.
+            // Let's invoke callback and let parent handle logic, or do it here.
+            // Skills.razor has userId. Let's pass the event to parent.
+            await OnDelete.InvokeAsync(Skill.Id);
+        }
+    }
 
     private decimal ProgressPercent => Math.Min(100, Skill.MasteryPercentage);
 

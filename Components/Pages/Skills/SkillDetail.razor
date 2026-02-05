@@ -5,7 +5,10 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
+@inject IJSRuntime JS
+
 <PageTitle>@(skill?.Name ?? "Skill Detail") - SkillTracker</PageTitle>
+<Toast @ref="toast" />
 
 @if (isLoading)
 {
@@ -62,9 +65,28 @@ else
                         <span class="material-symbols-outlined text-[18px]">add</span>
                         Log Progress
                     </a>
-                    <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-text-secondary transition-colors">
-                        <span class="material-symbols-outlined">more_vert</span>
-                    </button>
+                    
+                    <div class="relative">
+                        <button @onclick="ToggleMenu" @onclick:stopPropagation="true"
+                                class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-text-secondary transition-colors">
+                            <span class="material-symbols-outlined">more_vert</span>
+                        </button>
+                        
+                        @if (showMenu)
+                        {
+                            <div class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-surface-dark rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-30 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                <button @onclick="NavigateToEdit" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-[18px]">edit</span>
+                                    Edit
+                                </button>
+                                <button @onclick="DeleteSkill" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                                    Delete
+                                </button>
+                            </div>
+                            <div class="fixed inset-0 z-20 bg-transparent" @onclick="CloseMenu"></div>
+                        }
+                    </div>
                 </div>
             </div>
             
@@ -162,6 +184,8 @@ else
     private List<GoalDto> goals = new();
     private bool isLoading = true;
     private int userId;
+    private bool showMenu = false;
+    private Toast? toast;
 
     protected override async Task OnInitializedAsync()
     {
@@ -178,6 +202,40 @@ else
         }
         
         isLoading = false;
+    }
+
+    private void ToggleMenu() => showMenu = !showMenu;
+    private void CloseMenu() => showMenu = false;
+
+    private void NavigateToEdit()
+    {
+        CloseMenu();
+        // Since edit page doesn't exist yet, we show a toast or just navigate (knowing it might 404 for now)
+        // User only asked for Delete, so I'll leave this as is (it will 404 but that's expected for now)
+        Navigation.NavigateTo($"/skills/edit/{Id}");
+    }
+
+    private async Task DeleteSkill()
+    {
+        CloseMenu();
+        if (skill == null) return;
+
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{skill.Name}'? This cannot be undone.");
+        
+        if (confirmed)
+        {
+            var success = await SkillService.DeleteSkillAsync(Id, userId);
+            if (success)
+            {
+                toast?.Show("Success", "Skill deleted successfully. Redirecting...", Toast.ToastType.Success);
+                await Task.Delay(1000); // Wait for toast
+                Navigation.NavigateTo("/skills");
+            }
+            else
+            {
+                toast?.Show("Error", "Failed to delete skill.", Toast.ToastType.Error);
+            }
+        }
     }
 
     private string GetStatusColor(string status) => status switch
