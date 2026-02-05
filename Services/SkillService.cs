@@ -9,6 +9,7 @@ public interface ISkillService
 {
     Task<List<SkillDto>> GetUserSkillsAsync(int userId, string? visibility = null, string? status = null);
     Task<SkillDto?> GetSkillByIdAsync(int skillId, int userId);
+    Task<SkillDto?> GetSkillForDetailsAsync(int skillId, int? userId);
     Task<SkillDto?> GetSkillBySlugAsync(string slug);
     Task<SkillDto> CreateSkillAsync(int userId, CreateSkillRequest request);
     Task<SkillDto?> UpdateSkillAsync(int skillId, int userId, UpdateSkillRequest request);
@@ -30,6 +31,7 @@ public class SkillService : ISkillService
     {
         var query = _context.Skills
             .Include(s => s.Category)
+            .Include(s => s.User)
             .Include(s => s.Goals)
             .Include(s => s.ProgressLogs)
             .Where(s => s.UserId == userId);
@@ -50,6 +52,7 @@ public class SkillService : ISkillService
     public async Task<SkillDto?> GetSkillByIdAsync(int skillId, int userId)
     {
         var skill = await _context.Skills
+            .Include(s => s.User)
             .Include(s => s.Category)
             .Include(s => s.Goals)
                 .ThenInclude(g => g.Milestones)
@@ -57,6 +60,27 @@ public class SkillService : ISkillService
             .FirstOrDefaultAsync(s => s.Id == skillId && s.UserId == userId);
         
         return skill != null ? MapToDto(skill) : null;
+    }
+    
+    public async Task<SkillDto?> GetSkillForDetailsAsync(int skillId, int? userId)
+    {
+        var skill = await _context.Skills
+            .Include(s => s.User)
+            .Include(s => s.Category)
+            .Include(s => s.Goals)
+                .ThenInclude(g => g.Milestones)
+            .Include(s => s.ProgressLogs)
+            .FirstOrDefaultAsync(s => s.Id == skillId);
+        
+        if (skill == null) return null;
+        
+        // Check access: Public OR Owner
+        var isOwner = userId.HasValue && skill.UserId == userId.Value;
+        var isPublic = skill.Visibility == "public";
+        
+        if (!isPublic && !isOwner) return null;
+        
+        return MapToDto(skill);
     }
     
     public async Task<SkillDto?> GetSkillBySlugAsync(string slug)
@@ -294,6 +318,8 @@ public class SkillService : ISkillService
         return new SkillDto
         {
             Id = skill.Id,
+            UserId = skill.UserId,
+            OwnerName = skill.User != null ? $"{skill.User.FirstName} {skill.User.LastName}".Trim() : "Unknown User",
             Name = skill.Name,
             Description = skill.Description,
             BigGoal = skill.BigGoal,

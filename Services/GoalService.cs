@@ -8,6 +8,7 @@ namespace CSE325FinalProject.Services;
 public interface IGoalService
 {
     Task<List<GoalDto>> GetSkillGoalsAsync(int skillId, int userId);
+    Task<List<GoalDto>> GetSkillGoalsForDetailsAsync(int skillId, int? userId);
     Task<GoalDto?> GetGoalByIdAsync(int goalId, int userId);
     Task<GoalDto> CreateGoalAsync(int skillId, int userId, CreateGoalRequest request);
     Task<GoalDto?> UpdateGoalAsync(int goalId, int userId, UpdateGoalRequest request);
@@ -32,6 +33,22 @@ public class GoalService : IGoalService
             .Include(g => g.Skill)
             .Include(g => g.Milestones)
             .Where(g => g.SkillId == skillId && g.UserId == userId)
+            .OrderBy(g => g.SortOrder)
+            .ToListAsync();
+        
+        return goals.Select(MapToDto).ToList();
+    }
+    
+    public async Task<List<GoalDto>> GetSkillGoalsForDetailsAsync(int skillId, int? userId)
+    {
+        // First check skill access
+        var skill = await _skillService.GetSkillForDetailsAsync(skillId, userId);
+        if (skill == null) return new List<GoalDto>();
+        
+        var goals = await _context.Goals
+            .Include(g => g.Skill)
+            .Include(g => g.Milestones)
+            .Where(g => g.SkillId == skillId)
             .OrderBy(g => g.SortOrder)
             .ToListAsync();
         

@@ -1,10 +1,8 @@
 @page "/skills/{Id:int}"
-@attribute [Authorize]
 @inject ISkillService SkillService
 @inject IGoalService GoalService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
-
 @inject IJSRuntime JS
 
 <PageTitle>@(skill?.Name ?? "Skill Detail") - SkillTracker</PageTitle>
@@ -21,7 +19,7 @@ else if (skill == null)
     <div class="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <span class="material-symbols-outlined text-6xl text-gray-400 mb-4">error</span>
         <h1 class="text-2xl font-bold text-text-main dark:text-white mb-2">Skill not found</h1>
-        <p class="text-text-secondary dark:text-gray-400 mb-6">The skill you're looking for doesn't exist or you don't have access to it.</p>
+        <p class="text-text-secondary dark:text-gray-400 mb-6">The skill you're looking for doesn't exist or is private.</p>
         <a href="/skills" class="px-6 py-3 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-colors">
             Back to Skills
         </a>
@@ -37,6 +35,10 @@ else
             <a href="/skills" class="hover:text-primary transition-colors">Skills</a>
             <span class="material-symbols-outlined text-[16px]">chevron_right</span>
             <span class="text-text-main dark:text-white font-medium">@skill.Name</span>
+            @if (!isOwner)
+            {
+                 <span class="ml-2 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-medium">Public View via @skill.OwnerName</span>
+            }
         </nav>
         
         <!-- Header -->
@@ -61,32 +63,35 @@ else
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <a href="/progress/log?skillId=@skill.Id" class="flex items-center gap-2 px-4 h-10 bg-primary hover:bg-primary-dark text-text-main font-bold text-sm rounded-lg transition-all">
-                        <span class="material-symbols-outlined text-[18px]">add</span>
-                        Log Progress
-                    </a>
-                    
-                    <div class="relative">
-                        <button @onclick="ToggleMenu" @onclick:stopPropagation="true"
-                                class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-text-secondary transition-colors">
-                            <span class="material-symbols-outlined">more_vert</span>
-                        </button>
+                    @if (isOwner)
+                    {
+                        <a href="/progress/log?skillId=@skill.Id" class="flex items-center gap-2 px-4 h-10 bg-primary hover:bg-primary-dark text-text-main font-bold text-sm rounded-lg transition-all">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                            Log Progress
+                        </a>
                         
-                        @if (showMenu)
-                        {
-                            <div class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-surface-dark rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-30 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                                <button @onclick="NavigateToEdit" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-[18px]">edit</span>
-                                    Edit
-                                </button>
-                                <button @onclick="DeleteSkill" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                                    Delete
-                                </button>
-                            </div>
-                            <div class="fixed inset-0 z-20 bg-transparent" @onclick="CloseMenu"></div>
-                        }
-                    </div>
+                        <div class="relative">
+                            <button @onclick="ToggleMenu" @onclick:stopPropagation="true"
+                                    class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-text-secondary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                            
+                            @if (showMenu)
+                            {
+                                <div class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-surface-dark rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-30 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                    <button @onclick="NavigateToEdit" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[18px]">edit</span>
+                                        Edit
+                                    </button>
+                                    <button @onclick="DeleteSkill" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        Delete
+                                    </button>
+                                </div>
+                                <div class="fixed inset-0 z-20 bg-transparent" @onclick="CloseMenu"></div>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
             
@@ -126,10 +131,13 @@ else
         <section>
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-text-main dark:text-white">Goals</h2>
-                <button class="flex items-center gap-2 px-4 h-9 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-text-main dark:text-white font-medium text-sm rounded-lg transition-colors">
-                    <span class="material-symbols-outlined text-[18px]">add</span>
-                    Add Goal
-                </button>
+                @if (isOwner)
+                {
+                    <button class="flex items-center gap-2 px-4 h-9 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-text-main dark:text-white font-medium text-sm rounded-lg transition-colors">
+                        <span class="material-symbols-outlined text-[18px]">add</span>
+                        Add Goal
+                    </button>
+                }
             </div>
             
             @if (goals.Any())
@@ -170,7 +178,7 @@ else
             {
                 <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-8 text-center border border-gray-100 dark:border-gray-800">
                     <span class="material-symbols-outlined text-4xl text-gray-400 mb-2">flag</span>
-                    <p class="text-text-secondary dark:text-gray-400">No goals yet. Create your first goal to start tracking progress.</p>
+                    <p class="text-text-secondary dark:text-gray-400">No goals yet. @(isOwner ? "Create your first goal to start tracking progress." : "")</p>
                 </div>
             }
         </section>
@@ -183,22 +191,35 @@ else
     private SkillDto? skill;
     private List<GoalDto> goals = new();
     private bool isLoading = true;
-    private int userId;
+    private int? currentUserId;
     private bool showMenu = false;
     private Toast? toast;
+    
+    // Determine ownership based on current user and skill ownership
+    private bool isOwner => currentUserId.HasValue && skill?.UserId == currentUserId.Value;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var userIdClaim = authState.User.FindFirst("userId")?.Value;
         
-        if (int.TryParse(userIdClaim, out userId) && userId > 0)
+        if (int.TryParse(userIdClaim, out int uid))
         {
-            skill = await SkillService.GetSkillByIdAsync(Id, userId);
-            if (skill != null)
-            {
-                goals = await GoalService.GetSkillGoalsAsync(Id, userId);
-            }
+            currentUserId = uid;
+        }
+        else 
+        {
+            currentUserId = null;
+        }
+        
+        // Pass currentUserId (allows null for anonymous)
+        // If logged in, pass ID. If not, pass null.
+        // Service handles permission check (Public OR Owned).
+        skill = await SkillService.GetSkillForDetailsAsync(Id, currentUserId);
+        
+        if (skill != null)
+        {
+            goals = await GoalService.GetSkillGoalsForDetailsAsync(Id, currentUserId);
         }
         
         isLoading = false;
@@ -210,25 +231,23 @@ else
     private void NavigateToEdit()
     {
         CloseMenu();
-        // Since edit page doesn't exist yet, we show a toast or just navigate (knowing it might 404 for now)
-        // User only asked for Delete, so I'll leave this as is (it will 404 but that's expected for now)
-        Navigation.NavigateTo($"/skills/edit/{Id}");
+         Navigation.NavigateTo($"/skills/edit/{Id}");
     }
 
     private async Task DeleteSkill()
     {
         CloseMenu();
-        if (skill == null) return;
+        if (skill == null || !currentUserId.HasValue) return;
 
         var confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{skill.Name}'? This cannot be undone.");
         
         if (confirmed)
         {
-            var success = await SkillService.DeleteSkillAsync(Id, userId);
+            var success = await SkillService.DeleteSkillAsync(Id, currentUserId.Value);
             if (success)
             {
                 toast?.Show("Success", "Skill deleted successfully. Redirecting...", Toast.ToastType.Success);
-                await Task.Delay(1000); // Wait for toast
+                await Task.Delay(1000); 
                 Navigation.NavigateTo("/skills");
             }
             else
