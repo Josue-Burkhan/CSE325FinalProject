@@ -182,6 +182,59 @@ else
                 </div>
             }
         </section>
+        
+        <!-- History Section -->
+        <section class="pb-12">
+            <h2 class="text-xl font-bold text-text-main dark:text-white mb-4">History</h2>
+            
+            @if (skill.Logs.Any())
+            {
+                <div class="space-y-4">
+                    @foreach (var log in skill.Logs)
+                    {
+                        <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-gray-100 dark:border-gray-800">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <h3 class="font-medium text-text-main dark:text-white">@(log.Title ?? "Progress Log")</h3>
+                                        <span class="text-xs text-text-secondary dark:text-gray-500">• @log.LogDate.ToString("MMM dd, yyyy")</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(log.Description))
+                                    {
+                                        <p class="text-sm text-text-secondary dark:text-gray-400 mb-2">@log.Description</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(log.GoalTitle))
+                                    {
+                                        <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400">
+                                            <span class="material-symbols-outlined text-[14px]">flag</span>
+                                            @log.GoalTitle
+                                        </div>
+                                    }
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-bold text-primary text-lg">+@Math.Round(log.HoursLogged, 1)h</span>
+                                    @if (log.QualityRating.HasValue)
+                                    {
+                                        <div class="flex items-center justify-end text-yellow-500 text-xs mt-1">
+                                            @for (int i = 0; i < log.QualityRating.Value; i++)
+                                            {
+                                                <span class="material-symbols-outlined text-[14px] fill-current">star</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-8 text-text-secondary dark:text-gray-400">
+                    <p>No progress logged yet.</p>
+                </div>
+            }
+        </section>
     </div>
 }
 

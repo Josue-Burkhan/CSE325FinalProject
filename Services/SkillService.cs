@@ -342,7 +342,23 @@ public class SkillService : ISkillService
             } : null,
             GoalsCount = skill.Goals?.Count ?? 0,
             CompletedGoalsCount = skill.Goals?.Count(g => g.Status == "completed") ?? 0,
-            LogsCount = skill.ProgressLogs?.Count ?? 0
+            LogsCount = skill.ProgressLogs?.Count ?? 0,
+            Logs = skill.ProgressLogs?
+                .OrderByDescending(l => l.LogDate)
+                .Select(l => new ProgressLogDto
+                {
+                    Id = l.Id,
+                    SkillId = l.SkillId,
+                    SkillName = skill.Name,
+                    GoalId = l.GoalId,
+                    GoalTitle = l.Goal?.Title,
+                    Title = l.Title,
+                    Description = l.Description,
+                    HoursLogged = l.HoursLogged,
+                    LogDate = l.LogDate,
+                    QualityRating = l.QualityRating,
+                    CreatedAt = l.CreatedAt
+                }).ToList() ?? new List<ProgressLogDto>()
         };
     }
 }

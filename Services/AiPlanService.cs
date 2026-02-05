@@ -11,6 +11,7 @@ namespace CSE325FinalProject.Services;
 public interface IAiPlanService
 {
     Task<AiPlanResponse> GeneratePlanAsync(int userId, AiPlanRequest request);
+    Task<AiGeneratedGoal?> RefineGoalAsync(string instruction, AiGeneratedGoal currentGoal);
     Task<Skill> ApplyPlanAsync(int userId, AiGeneratedSkillPlan plan);
 }
 
@@ -35,31 +36,29 @@ public class AiPlanService : IAiPlanService
     
     public async Task<AiPlanResponse> GeneratePlanAsync(int userId, AiPlanRequest request)
     {
-        var apiKey = _configuration["GeminiAI:ApiKey"];
-        if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR_GEMINI_API_KEY_HERE")
+        // Simply get the key and trim whitespace
+        var apiKey = _configuration["GeminiAI:ApiKey"]?.Trim();
+        
+        if (string.IsNullOrEmpty(apiKey))
         {
-            _logger.LogWarning("Gemini AI API key not configured");
+            _logger.LogWarning("Gemini AI API key is missing");
             return new AiPlanResponse 
             { 
                 Success = false, 
-                ErrorMessage = "AI service not configured. Please add your Gemini API key." 
+                ErrorMessage = "AI service not configured. Please check your API key." 
             };
         }
         
         try
         {
-            // Build prompt based on clarifications
             var prompt = BuildPrompt(request);
             
-            // Check if we need clarification first
             if (request.Clarifications.Count < 2 && NeedsClarification(request))
             {
                 var clarificationQuestion = await GetClarificationQuestionAsync(request, apiKey);
                 if (!string.IsNullOrEmpty(clarificationQuestion))
                 {
-                    // Save partial plan
                     await SaveAiPlanAsync(userId, request, null, "pending");
-                    
                     return new AiPlanResponse
                     {
                         Success = true,
@@ -69,14 +68,11 @@ public class AiPlanService : IAiPlanService
                 }
             }
             
-            // Generate full plan
             var plan = await GenerateFullPlanAsync(request, apiKey);
             
             if (plan != null)
             {
-                // Save completed plan
                 await SaveAiPlanAsync(userId, request, plan, "completed");
-                
                 return new AiPlanResponse
                 {
                     Success = true,
@@ -100,6 +96,43 @@ public class AiPlanService : IAiPlanService
                 ErrorMessage = "An error occurred while generating your plan. Please try again."
             };
         }
+    }
+
+    public async Task<AiGeneratedGoal?> RefineGoalAsync(string instruction, AiGeneratedGoal currentGoal)
+    {
+         var apiKey = _configuration["GeminiAI:ApiKey"]?.Trim();
+         
+         if (string.IsNullOrEmpty(apiKey)) return null;
+
+         var currentGoalJson = JsonSerializer.Serialize(currentGoal);
+         var prompt = $@"You are an expert learning coach. The user wants to modify a specific goal in their learning plan.
+
+Current Goal JSON:
+{currentGoalJson}
+
+User Instruction: ""{instruction}""
+
+Task: Update the goal title, description, and milestones based on the user's instruction. Keep the structure consistent.
+Respond with ONLY the updated Goal JSON object.";
+
+         var response = await CallGeminiApiAsync(prompt, apiKey);
+         if (string.IsNullOrEmpty(response)) return null;
+
+         try
+         {
+            var jsonStart = response.IndexOf('{');
+            var jsonEnd = response.LastIndexOf('}');
+            if (jsonStart >= 0 && jsonEnd > jsonStart)
+            {
+                var jsonStr = response.Substring(jsonStart, jsonEnd - jsonStart + 1);
+                return JsonSerializer.Deserialize<AiGeneratedGoal>(jsonStr, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Failed to parse refined goal JSON");
+         }
+         return null;
     }
     
     public async Task<Skill> ApplyPlanAsync(int userId, AiGeneratedSkillPlan plan)
@@ -171,6 +204,8 @@ public class AiPlanService : IAiPlanService
         
         return skill;
     }
+    
+
     
     private bool NeedsClarification(AiPlanRequest request)
     {
@@ -316,7 +351,7 @@ Respond with ONLY the JSON, no additional text.";
             generationConfig = new
             {
                 temperature = 0.7,
-                maxOutputTokens = 2048
+                maxOutputTokens = 16384
             }
         };
         

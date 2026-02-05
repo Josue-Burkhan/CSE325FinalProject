@@ -95,6 +95,7 @@ public class SkillDto
     public int GoalsCount { get; set; }
     public int CompletedGoalsCount { get; set; }
     public int LogsCount { get; set; }
+    public List<ProgressLogDto> Logs { get; set; } = new();
 }
 
 public class CreateSkillRequest

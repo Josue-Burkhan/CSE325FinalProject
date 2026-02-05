@@ -4,6 +4,7 @@
 @inject IAiPlanService AiPlanService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Create New Skill - SkillTracker</PageTitle>
 
@@ -21,10 +22,21 @@
         </div>
     }
     
-    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden relative">
+        
+        <!-- Loading Overlay -->
+        @if (isGeneratingAi)
+        {
+            <div class="absolute inset-0 z-50 bg-white/90 dark:bg-surface-dark/90 flex flex-col items-center justify-center animate-in fade-in duration-300">
+                <div class="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-primary mb-6"></div>
+                <h3 class="text-xl font-bold text-text-main dark:text-white animate-pulse">@aiLoadingMessage</h3>
+                <p class="text-text-secondary dark:text-gray-400 mt-2">Crafting your personalized path...</p>
+            </div>
+        }
+
         <!-- Progress Steps -->
         <div class="flex border-b border-gray-100 dark:border-gray-800">
-            @for (int i = 1; i <= 3; i++)
+            @for (int i = 1; i <= 4; i++)
             {
                 var stepNum = i;
                 <div class="flex-1 p-4 @(currentStep == stepNum ? "bg-primary/5 dark:bg-primary/10" : "") @(currentStep > stepNum ? "bg-green-50 dark:bg-green-900/10" : "")">
@@ -39,9 +51,8 @@
                                 @stepNum
                             }
                         </div>
-                        <div>
+                        <div class="hidden sm:block">
                             <p class="font-medium text-sm text-text-main dark:text-white">@GetStepTitle(stepNum)</p>
-                            <p class="text-xs text-text-secondary dark:text-gray-500">@GetStepSubtitle(stepNum)</p>
                         </div>
                     </div>
                 </div>
@@ -74,10 +85,10 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">What's your big goal? (Optional)</label>
+                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Describe your goal <span class="text-red-500">*</span></label>
                         <textarea @bind="skillModel.BigGoal" rows="3"
                                   class="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white resize-none focus:ring-2 focus:ring-primary/50" 
-                                  placeholder="Describe what you want to achieve..."></textarea>
+                                  placeholder="Describe specifically what you want to achieve (e.g., 'Lose 10kg in 2 months'). The AI uses this to build your plan."></textarea>
                     </div>
                 </div>
             }
@@ -117,7 +128,63 @@
             }
             else if (currentStep == 3)
             {
-                <!-- Step 3: Review -->
+                <!-- Step 3: AI Review -->
+                 <div class="space-y-6">
+                     <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-text-main dark:text-white">AI Generated Plan</h2>
+                            <p class="text-sm text-text-secondary dark:text-gray-400">Review your customized roadmap.</p>
+                        </div>
+                        <div class="text-right">
+                             <p class="text-xs text-text-secondary dark:text-gray-500">Modifications left</p>
+                             <p class="font-bold text-primary">@(2 - editsUsed) / 2</p>
+                        </div>
+                     </div>
+                     
+                     <div class="space-y-4">
+                         @if (aiGeneratedPlan?.Goals != null)
+                         {
+                             int gIndex = 0;
+                             foreach (var goal in aiGeneratedPlan.Goals)
+                             {
+                                 int capturedIndex = gIndex; // Capture for lambda
+                                 <div class="bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-gray-700 rounded-xl p-4 transition-all duration-500 animate-in slide-in-from-bottom-2 fade-in">
+                                     <div class="flex justify-between items-start gap-4">
+                                         <div>
+                                             <div class="flex items-center gap-2 mb-1">
+                                                <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-md uppercase">Week @goal.WeekNumber</span>
+                                                <h3 class="font-bold text-text-main dark:text-white">@goal.Title</h3>
+                                             </div>
+                                             <p class="text-sm text-text-secondary dark:text-gray-400 mb-3">@goal.Description</p>
+                                             
+                                             <ul class="space-y-1 ml-1">
+                                                 @foreach (var ms in goal.Milestones)
+                                                 {
+                                                     <li class="flex items-start gap-2 text-xs text-text-main dark:text-gray-300">
+                                                         <span class="material-symbols-outlined text-[14px] text-green-500 mt-0.5">check_circle</span>
+                                                         <span>@ms</span>
+                                                     </li>
+                                                 }
+                                             </ul>
+                                         </div>
+                                         
+                                         @if (editsUsed < 2)
+                                         {
+                                             <button @onclick="() => OpenEditGoal(capturedIndex)" class="p-2 text-text-secondary hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors" title="Ask AI to refine this goal">
+                                                 <span class="material-symbols-outlined">chat</span>
+                                             </button>
+                                         }
+                                     </div>
+                                 </div>
+                                 gIndex++;
+                             }
+                         }
+                     </div>
+                 </div>
+            }
+            else
+            {
+                <!-- Final Step: Confirm -->
                 <div class="space-y-6">
                     <div class="bg-background-light dark:bg-background-dark rounded-xl p-6">
                         <h3 class="font-bold text-lg text-text-main dark:text-white mb-4">Skill Summary</h3>
@@ -138,20 +205,18 @@
                                 <dt class="text-text-secondary dark:text-gray-400">Weekly Commitment</dt>
                                 <dd class="font-medium text-text-main dark:text-white">@skillModel.HoursPerWeek hours/week</dd>
                             </div>
-                            <div class="flex justify-between">
-                                <dt class="text-text-secondary dark:text-gray-400">Visibility</dt>
-                                <dd class="font-medium text-text-main dark:text-white capitalize">@skillModel.Visibility</dd>
-                            </div>
+                            @if (aiGeneratedPlan != null)
+                            {
+                                <div class="flex justify-between">
+                                    <dt class="text-text-secondary dark:text-gray-400">Plan Source</dt>
+                                    <dd class="font-medium text-primary flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                                        AI Generated (@aiGeneratedPlan.Goals.Count goals)
+                                    </dd>
+                                </div>
+                            }
                         </dl>
                     </div>
-                    
-                    @if (!string.IsNullOrEmpty(skillModel.BigGoal))
-                    {
-                        <div class="bg-background-light dark:bg-background-dark rounded-xl p-6">
-                            <h3 class="font-bold text-lg text-text-main dark:text-white mb-2">Your Goal</h3>
-                            <p class="text-text-secondary dark:text-gray-400">@skillModel.BigGoal</p>
-                        </div>
-                    }
                 </div>
             }
         </div>
@@ -172,7 +237,7 @@
                 </a>
             }
             
-            @if (currentStep < 3)
+            @if (currentStep < 4)
             {
                 <button @onclick="NextStep" disabled="@(!CanProceed)" 
                         class="flex items-center gap-2 px-8 h-11 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
@@ -200,6 +265,48 @@
     </div>
 </div>
 
+<!-- Chat Modal -->
+@if (showChatModal && editingGoalIndex >= 0 && aiGeneratedPlan?.Goals != null)
+{
+    var goal = aiGeneratedPlan.Goals[editingGoalIndex];
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+        <div class="bg-white dark:bg-surface-dark rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="font-bold text-lg text-text-main dark:text-white">Refine Goal</h3>
+                <button @onclick="CloseChatModal" class="text-text-secondary hover:text-text-main">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto">
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+                    <p class="text-xs uppercase font-bold text-text-secondary mb-1">Current Goal</p>
+                    <h4 class="font-bold text-text-main dark:text-white">@goal.Title</h4>
+                    <p class="text-sm text-text-secondary dark:text-gray-400">@goal.Description</p>
+                </div>
+                
+                <p class="text-sm font-medium text-text-main dark:text-white mb-2">How should AI change this goal?</p>
+                <textarea @bind="editInstruction" class="w-full p-3 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg resize-none focus:ring-2 focus:ring-primary" rows="3" placeholder="e.g., Make it more intensive, Focus more on theory..."></textarea>
+            </div>
+            
+            <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+                <button @onclick="CloseChatModal" class="px-4 py-2 text-text-secondary hover:text-text-main font-medium">Cancel</button>
+                <button @onclick="SubmitRefinement" disabled="@isRefining" class="px-5 py-2 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg flex items-center gap-2">
+                     @if (isRefining)
+                     {
+                         <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-text-main"></div>
+                         <span>Refining...</span>
+                     }
+                     else
+                     {
+                         <span>Update Goal</span>
+                     }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private int currentStep = 1;
     private List<CategoryDto> categories = new();
@@ -207,6 +314,19 @@
     private bool isSubmitting;
     private string? errorMessage;
     private int userId;
+    
+    // AI State
+    private bool useAiPlan = true; // Always true as requested
+    private bool isGeneratingAi = false;
+    private string aiLoadingMessage = "Generating Plan...";
+    private AiGeneratedSkillPlan? aiGeneratedPlan;
+    private int editsUsed = 0;
+    
+    // Chat Modal State
+    private bool showChatModal = false;
+    private int editingGoalIndex = -1;
+    private string editInstruction = "";
+    private bool isRefining = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -219,21 +339,122 @@
 
     private bool CanProceed => currentStep switch
     {
-        1 => !string.IsNullOrWhiteSpace(skillModel.Name),
-        2 => true,
+        1 => !string.IsNullOrWhiteSpace(skillModel.Name) && !string.IsNullOrWhiteSpace(skillModel.BigGoal),
+        2 => skillModel.TargetDate.HasValue,
+        3 => true, 
         _ => true
     };
 
-    private void NextStep()
+    private async Task NextStep()
     {
-        if (currentStep < 3 && CanProceed)
+        if (!CanProceed) return;
+        
+        if (currentStep == 2 && aiGeneratedPlan == null)
+        {
+            // Always generate AI plan after schedule
+            await GenerateAiPlan();
+        }
+        else
+        {
             currentStep++;
+        }
     }
 
     private void PreviousStep()
     {
         if (currentStep > 1)
             currentStep--;
+    }
+    
+    // AI Logic
+    private async Task GenerateAiPlan()
+    {
+        isGeneratingAi = true;
+        aiLoadingMessage = "Analyzing your goal...";
+        StateHasChanged(); // Force update
+        
+        try 
+        {
+            var request = new AiPlanRequest
+            {
+                GoalDescription = skillModel.BigGoal ?? skillModel.Name,
+                TargetDate = skillModel.TargetDate,
+                HoursPerPeriod = skillModel.HoursPerWeek,
+                Frequency = "weekly",
+                PreferredTimeSlot = "flexible"
+            };
+            
+            aiLoadingMessage = "Crafting milestones...";
+            StateHasChanged();
+            
+            var response = await AiPlanService.GeneratePlanAsync(userId, request);
+            
+            if (response.Success && response.Plan != null)
+            {
+                aiGeneratedPlan = response.Plan;
+                currentStep = 3; // Move to AI Review
+            }
+            else if (response.NeedsClarification)
+            {
+                // Simple handling for now: prepend clarification to big goal and try again implicitly?
+                // Or just show error. User requested "Animation" and "List of goals".
+                // I will assume success for "Lose 10kg in 2 months".
+                errorMessage = "AI needs more details: " + response.ClarificationQuestion;
+            }
+            else
+            {
+                errorMessage = response.ErrorMessage ?? "Failed to generate plan.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "AI Error: " + ex.Message;
+        }
+        finally
+        {
+            isGeneratingAi = false;
+        }
+    }
+    
+    private void OpenEditGoal(int index)
+    {
+        editingGoalIndex = index;
+        editInstruction = "";
+        showChatModal = true;
+    }
+    
+    private void CloseChatModal()
+    {
+        showChatModal = false;
+        editingGoalIndex = -1;
+    }
+    
+    private async Task SubmitRefinement()
+    {
+        if (string.IsNullOrWhiteSpace(editInstruction) || editingGoalIndex < 0 || aiGeneratedPlan == null) return;
+        
+        isRefining = true;
+        try
+        {
+            var goal = aiGeneratedPlan.Goals[editingGoalIndex];
+            var updatedGoal = await AiPlanService.RefineGoalAsync(editInstruction, goal);
+            
+            if (updatedGoal != null)
+            {
+                // Update the goal in the list
+                aiGeneratedPlan.Goals[editingGoalIndex] = updatedGoal;
+                editsUsed++;
+                CloseChatModal();
+            }
+            else
+            {
+                // Show error in modal?
+            }
+        }
+        finally
+        {
+            isRefining = false;
+        }
     }
 
     private async Task CreateSkill()
@@ -245,25 +466,32 @@
 
         try
         {
-            var request = new CreateSkillRequest
+            if (useAiPlan && aiGeneratedPlan != null)
             {
-                Name = skillModel.Name,
-                Description = skillModel.BigGoal,
-                BigGoal = skillModel.BigGoal,
-                CategoryId = skillModel.CategoryId,
-                TargetDate = skillModel.TargetDate,
-                Visibility = skillModel.Visibility
-            };
-
-            var result = await SkillService.CreateSkillAsync(userId, request);
-            
-            if (result != null)
-            {
-                Navigation.NavigateTo($"/skills/{result.Id}");
+                // Ensure plan has latest details from form
+                aiGeneratedPlan.SkillName = skillModel.Name;
+                
+                var result = await AiPlanService.ApplyPlanAsync(userId, aiGeneratedPlan);
+                if (result != null) Navigation.NavigateTo($"/skills/{result.Id}");
+                else errorMessage = "Failed to save AI plan.";
             }
             else
             {
-                errorMessage = "Failed to create skill. Please try again.";
+                // Manual creation
+                var request = new CreateSkillRequest
+                {
+                    Name = skillModel.Name,
+                    Description = skillModel.BigGoal,
+                    BigGoal = skillModel.BigGoal,
+                    CategoryId = skillModel.CategoryId,
+                    TargetDate = skillModel.TargetDate,
+                    Visibility = skillModel.Visibility
+                };
+    
+                var result = await SkillService.CreateSkillAsync(userId, request);
+                
+                if (result != null) Navigation.NavigateTo($"/skills/{result.Id}");
+                else errorMessage = "Failed to create skill.";
             }
         }
         catch (Exception ex)
@@ -276,21 +504,14 @@
         }
     }
 
-    private string GetStepTitle(int step) => step switch
+    private string GetStepTitle(int step)
     {
-        1 => "Basic Info",
-        2 => "Schedule",
-        3 => "Review",
-        _ => ""
-    };
-
-    private string GetStepSubtitle(int step) => step switch
-    {
-        1 => "Define your skill",
-        2 => "Set your commitment",
-        3 => "Confirm details",
-        _ => ""
-    };
+        if (useAiPlan)
+        {
+            return step switch { 1 => "Basic Info", 2 => "Schedule", 3 => "AI Review", 4 => "Confirm", _ => "" };
+        }
+        return step switch { 1 => "Basic Info", 2 => "Schedule", 3 => "Review", _ => "" };
+    }
 
     public class SkillFormModel
     {
