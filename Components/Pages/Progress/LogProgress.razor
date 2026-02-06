@@ -50,11 +50,29 @@
                 <span class="material-symbols-outlined text-primary text-lg">school</span>
                 Select Skill
             </label>
-            <select @bind="model.SkillId" class="w-full p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border-2 border-transparent focus:border-primary/50 text-text-main dark:text-white">
-                <option value="">Choose a skill...</option>
+            <select value="@model.SkillId" @onchange="OnSkillSelected" class="w-full p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border-2 border-transparent focus:border-primary/50 text-text-main dark:text-white">
+                <option value="0">Choose a skill...</option>
                 @foreach (var skill in skills)
                 {
                     <option value="@skill.Id">@skill.Name</option>
+                }
+            </select>
+        </section>
+    }
+    
+    <!-- Goal Selection (Optional) -->
+    @if (model.SkillId > 0 && goals.Any())
+    {
+        <section class="flex flex-col gap-3">
+             <label class="flex items-center gap-2 text-sm font-bold text-text-main dark:text-gray-200 uppercase tracking-wider">
+                <span class="material-symbols-outlined text-primary text-lg">flag</span>
+                Goal (Optional)
+            </label>
+            <select value="@(model.GoalId ?? 0)" @onchange="OnGoalSelected" class="w-full p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border-2 border-transparent focus:border-primary/50 text-text-main dark:text-white">
+                <option value="0">General Progress (No specific goal)</option>
+                @foreach (var goal in goals)
+                {
+                    <option value="@goal.Id">@goal.Title</option>
                 }
             </select>
         </section>
@@ -197,6 +215,7 @@
 
     private List<SkillDto> skills = new();
     private SkillDto? selectedSkill;
+    private List<GoalDto> goals = new(); // Goals for the selected skill
     private List<MilestoneDto> milestones = new();
     private ProgressLogModel model = new();
     private int hours;
@@ -223,6 +242,12 @@
         {
             model.SkillId = SkillId.Value;
             selectedSkill = skills.FirstOrDefault(s => s.Id == SkillId.Value);
+            
+            // Fetch goals for pre-selected skill
+            if (model.SkillId > 0)
+            {
+                goals = await GoalService.GetSkillGoalsAsync(model.SkillId, userId);
+            }
         }
 
         if (GoalId.HasValue)
@@ -232,6 +257,51 @@
             if (goal != null)
             {
                 milestones = goal.Milestones.Where(m => !m.IsCompleted).ToList();
+            }
+        }
+    }
+    
+    private async Task OnSkillSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int id))
+        {
+            model.SkillId = id;
+            selectedSkill = skills.FirstOrDefault(s => s.Id == id);
+            model.GoalId = null; // Reset goal
+            milestones.Clear();  // Reset milestones
+            
+            if (id > 0)
+            {
+                goals = await GoalService.GetSkillGoalsAsync(id, userId);
+            }
+            else 
+            {
+                goals.Clear();
+            }
+        }
+    }
+
+    private async Task OnGoalSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int id))
+        {
+            if (id > 0)
+            {
+                model.GoalId = id;
+                var goal = await GoalService.GetGoalByIdAsync(id, userId);
+                if (goal != null)
+                {
+                    milestones = goal.Milestones.Where(m => !m.IsCompleted).ToList();
+                }
+                else
+                {
+                     milestones.Clear();
+                }
+            }
+            else
+            {
+                model.GoalId = null;
+                milestones.Clear();
             }
         }
     }
