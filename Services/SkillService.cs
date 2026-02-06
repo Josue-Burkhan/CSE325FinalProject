@@ -244,10 +244,39 @@ public class SkillService : ISkillService
     
     public async Task<bool> DeleteSkillAsync(int skillId, int userId)
     {
-        var skill = await _context.Skills.FirstOrDefaultAsync(s => s.Id == skillId && s.UserId == userId);
+        var skill = await _context.Skills
+            .Include(s => s.Goals).ThenInclude(g => g.Milestones)
+            .Include(s => s.ProgressLogs)
+            .Include(s => s.Schedule).ThenInclude(sch => sch.ScheduleDays)
+            .FirstOrDefaultAsync(s => s.Id == skillId && s.UserId == userId);
         
         if (skill == null) return false;
         
+        // Manual cascade delete 
+        // 1. Logs
+        if (skill.ProgressLogs != null && skill.ProgressLogs.Any())
+            _context.ProgressLogs.RemoveRange(skill.ProgressLogs);
+            
+        // 2. Schedule
+        if (skill.Schedule != null)
+        {
+            if (skill.Schedule.ScheduleDays != null)
+                _context.ScheduleDays.RemoveRange(skill.Schedule.ScheduleDays);
+            _context.SkillSchedules.Remove(skill.Schedule);
+        }
+            
+        // 3. Goals & Milestones
+        if (skill.Goals != null && skill.Goals.Any())
+        {
+            foreach (var goal in skill.Goals)
+            {
+                if (goal.Milestones != null && goal.Milestones.Any())
+                    _context.Milestones.RemoveRange(goal.Milestones);
+            }
+            _context.Goals.RemoveRange(skill.Goals);
+        }
+        
+        // 4. Skill
         _context.Skills.Remove(skill);
         await _context.SaveChangesAsync();
         

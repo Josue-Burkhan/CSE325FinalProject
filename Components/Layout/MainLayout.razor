@@ -8,14 +8,11 @@
     <aside class="w-64 bg-surface-light dark:bg-surface-dark border-r border-gray-100 dark:border-gray-800 flex flex-col justify-between h-full shrink-0 transition-all duration-300 z-20 hidden md:flex">
         <div>
             <div class="p-6 pb-8">
-                <a href="/" class="flex items-center gap-3 cursor-pointer">
-                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-text-main shadow-glow">
-                        <span class="material-symbols-outlined text-xl">folder_managed</span>
-                    </div>
-                    <div>
-                        <h1 class="text-text-main dark:text-white text-lg font-bold leading-none tracking-tight">SkillManager</h1>
-                        <p class="text-text-secondary dark:text-gray-400 text-xs font-medium mt-1">Track your progress</p>
-                    </div>
+                <a href="/" class="flex items-center gap-3 cursor-pointer group">
+                    <img src="images/Logo-better-me.png" alt="A Better Me Logo" class="h-10 w-auto object-contain group-hover:scale-105 transition-transform" />
+                    <span class="font-brand text-2xl text-gray-700 dark:text-gray-200">
+                        A better <span class="text-primary">me</span>
+                    </span>
                 </a>
             </div>
             <nav class="flex flex-col gap-2 px-4">
@@ -81,10 +78,10 @@
     <div class="md:hidden fixed top-0 left-0 right-0 z-30 bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-800 px-4 py-3">
         <div class="flex items-center justify-between">
             <a href="/" class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-text-main">
-                    <span class="material-symbols-outlined text-lg">folder_managed</span>
-                </div>
-                <span class="font-bold text-text-main dark:text-white">SkillManager</span>
+                <img src="images/Logo-better-me.png" alt="A Better Me Logo" class="h-8 w-auto object-contain" />
+                <span class="font-brand text-2xl text-gray-700 dark:text-gray-200">
+                    A better <span class="text-primary">me</span>
+                </span>
             </a>
             <button @onclick="ToggleMobileMenu" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
                 <span class="material-symbols-outlined text-text-main dark:text-white">menu</span>

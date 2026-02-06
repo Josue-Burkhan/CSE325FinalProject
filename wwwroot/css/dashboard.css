@@ -35,11 +35,11 @@
 /* Custom Checkbox/Toggle Styles */
 .toggle-checkbox:checked {
     right: 0;
-    border-color: #2dd7cc;
+    border-color: rgb(var(--color-primary-light));
 }
 
-.toggle-checkbox:checked + .toggle-label {
-    background-color: #2dd7cc;
+.toggle-checkbox:checked+.toggle-label {
+    background-color: rgb(var(--color-primary-light));
 }
 
 /* Progress Bar Animations */
@@ -52,6 +52,7 @@
     from {
         stroke-dashoffset: 251;
     }
+
     to {
         stroke-dashoffset: 87.85;
     }
@@ -76,6 +77,7 @@
     0% {
         transform: translateX(-100%);
     }
+
     100% {
         transform: translateX(100%);
     }

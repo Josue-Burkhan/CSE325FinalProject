@@ -12,7 +12,7 @@ public interface IAiPlanService
 {
     Task<AiPlanResponse> GeneratePlanAsync(int userId, AiPlanRequest request);
     Task<AiGeneratedGoal?> RefineGoalAsync(string instruction, AiGeneratedGoal currentGoal);
-    Task<Skill> ApplyPlanAsync(int userId, AiGeneratedSkillPlan plan);
+    Task<Skill> ApplyPlanAsync(int userId, AiGeneratedSkillPlan plan, DateTime? targetDate = null);
 }
 
 public class AiPlanService : IAiPlanService
@@ -135,7 +135,7 @@ Respond with ONLY the updated Goal JSON object.";
          return null;
     }
     
-    public async Task<Skill> ApplyPlanAsync(int userId, AiGeneratedSkillPlan plan)
+    public async Task<Skill> ApplyPlanAsync(int userId, AiGeneratedSkillPlan plan, DateTime? targetDate = null)
     {
         // Find or create category
         int? categoryId = null;
@@ -156,6 +156,7 @@ Respond with ONLY the updated Goal JSON object.";
             BigGoal = plan.BigGoal,
             Status = "in_progress",
             StartedAt = DateTime.UtcNow,
+            TargetDate = targetDate, // Save the target date
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

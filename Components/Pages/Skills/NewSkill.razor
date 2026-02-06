@@ -471,7 +471,7 @@
                 // Ensure plan has latest details from form
                 aiGeneratedPlan.SkillName = skillModel.Name;
                 
-                var result = await AiPlanService.ApplyPlanAsync(userId, aiGeneratedPlan);
+                var result = await AiPlanService.ApplyPlanAsync(userId, aiGeneratedPlan, skillModel.TargetDate);
                 if (result != null) Navigation.NavigateTo($"/skills/{result.Id}");
                 else errorMessage = "Failed to save AI plan.";
             }
