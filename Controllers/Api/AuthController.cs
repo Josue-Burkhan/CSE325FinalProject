@@ -1,6 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using CSE325FinalProject.Models;
 using CSE325FinalProject.Models.DTOs;
 using CSE325FinalProject.Services;
+using CSE325FinalProject.Data;
 
 namespace CSE325FinalProject.Controllers.Api;
 
@@ -9,14 +15,17 @@ namespace CSE325FinalProject.Controllers.Api;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly ApplicationDbContext _context;
     
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, ApplicationDbContext context)
     {
         _authService = authService;
+        _context = context;
     }
     
     /// <summary>
-    /// Register a new user
+    /// <summary>
+    /// Registers a new user account with the provided details
     /// </summary>
     [HttpPost("register")]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> Register([FromBody] RegisterRequest request)
@@ -41,7 +50,8 @@ public class AuthController : ControllerBase
     }
     
     /// <summary>
-    /// Login user and get tokens
+    /// <summary>
+    /// Authenticates a user and issues access/refresh tokens
     /// </summary>
     [HttpPost("login")]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> Login([FromBody] LoginRequest request)
@@ -65,7 +75,7 @@ public class AuthController : ControllerBase
             return Unauthorized(ApiResponse<AuthResponse>.Fail(result.Message ?? "Login failed"));
         }
         
-        // Set refresh token as HttpOnly cookie (more secure)
+        // Sets the refresh token as a secure HttpOnly cookie
         if (!string.IsNullOrEmpty(result.RefreshToken))
         {
             var cookieOptions = new CookieOptions
@@ -82,12 +92,13 @@ public class AuthController : ControllerBase
     }
     
     /// <summary>
-    /// Refresh access token using refresh token
+    /// <summary>
+    /// Renews the access token using a valid refresh token
     /// </summary>
     [HttpPost("refresh")]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> RefreshToken([FromBody] RefreshTokenRequest? request)
     {
-        // Try to get refresh token from cookie first, then from body
+        // Attempts to retrieve the refresh token from the cookie first, then the request body
         var refreshToken = Request.Cookies["refreshToken"] ?? request?.RefreshToken;
         
         if (string.IsNullOrEmpty(refreshToken))
@@ -102,7 +113,7 @@ public class AuthController : ControllerBase
         
         if (!result.Success)
         {
-            // Clear invalid cookie
+            // Clears the invalid cookie
             Response.Cookies.Delete("refreshToken");
             return Unauthorized(ApiResponse<AuthResponse>.Fail(result.Message ?? "Token refresh failed"));
         }
@@ -124,7 +135,8 @@ public class AuthController : ControllerBase
     }
     
     /// <summary>
-    /// Logout and invalidate tokens
+    /// <summary>
+    /// Invalidates the current session and clears authentication cookies
     /// </summary>
     [HttpPost("logout")]
     public async Task<ActionResult<ApiResponse<bool>>> Logout()
@@ -147,7 +159,8 @@ public class AuthController : ControllerBase
     }
     
     /// <summary>
-    /// Get current user info from token
+    /// <summary>
+    /// Retrieves the currently authenticated user's profile information
     /// </summary>
     [HttpGet("me")]
     public async Task<ActionResult<ApiResponse<UserDto>>> GetCurrentUser()
@@ -179,7 +192,8 @@ public class AuthController : ControllerBase
     }
     
     /// <summary>
-    /// Validate if refresh token is still valid
+    /// <summary>
+    /// Validates if the current refresh token is active and valid
     /// </summary>
     [HttpGet("validate")]
     public async Task<ActionResult<ApiResponse<bool>>> ValidateSession()
@@ -193,5 +207,85 @@ public class AuthController : ControllerBase
         
         var isValid = await _authService.ValidateSessionAsync(refreshToken);
         return Ok(ApiResponse<bool>.Ok(isValid, isValid ? "Session valid" : "Session expired"));
+    }
+
+    [HttpGet("github/login")]
+    public IActionResult LoginGitHub()
+    {
+        var redirectUrl = Url.Action("GitHubCallback", "Auth");
+        var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
+        return Challenge(properties, "GitHub");
+    }
+
+    [HttpGet("github/callback")]
+    public async Task<IActionResult> GitHubCallback()
+    {
+        var authenticateResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        if (!authenticateResult.Succeeded || authenticateResult.Principal == null)
+        {
+            // Fallback: try to authenticate with default scheme if cookie didn't work (unlikely for external)
+            // Actually, AddGitHub should have handled the handshake.
+            // If we are here, something went wrong or we need to check the external cookie scheme if we set one.
+            // But Program.cs set SignInScheme to "Cookies".
+            return Redirect("/login?error=external-auth-failed");
+        }
+
+        var claims = authenticateResult.Principal.Claims;
+        var emailClaim = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email) 
+                         ?? claims.FirstOrDefault(c => c.Type == "email");
+        var nameClaim = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name) 
+                        ?? claims.FirstOrDefault(c => c.Type == "name")
+                        ?? claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+
+        if (emailClaim == null)
+        {
+            return Redirect("/login?error=email-missing");
+        }
+
+        var email = emailClaim.Value;
+        var name = nameClaim?.Value ?? "GitHub User";
+        
+        // Split name into First/Last
+        var names = name.Split(' ', 2);
+        var firstName = names[0];
+        var lastName = names.Length > 1 ? names[1] : "";
+
+        // Check if user exists
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null)
+        {
+            // Create user
+            user = new User
+            {
+                Email = email,
+                FirstName = firstName,
+                LastName = lastName,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password
+                IsEmailVerified = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ThemePreference = "light"
+            };
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+        }
+        
+        // Re-issue cookie with application claims
+        var appClaims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.FullName),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim("initials", user.Initials),
+            new Claim("avatarUrl", user.AvatarUrl ?? "")
+        };
+        
+        var identity = new ClaimsIdentity(appClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+        
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+        return Redirect("/");
     }
 }

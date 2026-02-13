@@ -113,7 +113,7 @@
 
     private async Task Logout()
     {
-        // Note: In a real implementation, you'd want to clear the cookie server-side
+        // Redirects to the logout endpoint to clear the authentication cookie
         Navigation.NavigateTo("/account/logout", forceLoad: true);
     }
 

@@ -41,10 +41,11 @@ public class GoalService : IGoalService
     
     public async Task<List<GoalDto>> GetSkillGoalsForDetailsAsync(int skillId, int? userId)
     {
-        // First check skill access
+        // First checks if the user has access to view the skill
         var skill = await _skillService.GetSkillForDetailsAsync(skillId, userId);
         if (skill == null) return new List<GoalDto>();
         
+        // Retrieves goals including milestones for detailed display
         var goals = await _context.Goals
             .Include(g => g.Skill)
             .Include(g => g.Milestones)
@@ -75,7 +76,7 @@ public class GoalService : IGoalService
             throw new InvalidOperationException("Skill not found");
         }
         
-        // Get max sort order
+        // Determines the next sort order for the new goal
         var maxOrder = await _context.Goals
             .Where(g => g.SkillId == skillId)
             .MaxAsync(g => (int?)g.SortOrder) ?? -1;
@@ -85,6 +86,7 @@ public class GoalService : IGoalService
             SkillId = skillId,
             UserId = userId,
             Title = request.Title.Trim(),
+
             Description = request.Description?.Trim(),
             TargetHours = request.TargetHours,
             TargetDate = request.TargetDate,
@@ -151,7 +153,7 @@ public class GoalService : IGoalService
         
         await _context.SaveChangesAsync();
         
-        // Update skill progress after goal status change
+        // Triggers a recalculation of the parent skill's progress
         await _skillService.UpdateSkillProgressAsync(goal.SkillId);
         
         return await GetGoalByIdAsync(goalId, userId);
@@ -197,7 +199,7 @@ public class GoalService : IGoalService
             goal.ProgressPercentage = Math.Min(100, (goal.LoggedHours / goal.TargetHours.Value) * 100);
         }
         
-        // Auto-complete if 100%
+        // Automatically marks the goal as completed if progress reaches 100%
         if (goal.ProgressPercentage >= 100 && goal.Status != "completed")
         {
             goal.Status = "completed";

@@ -18,7 +18,8 @@ public class SkillsController : ControllerBase
     private int? GetUserId() => HttpContext.Session.GetInt32("UserId");
     
     /// <summary>
-    /// Get all skills for current user
+    /// <summary>
+    /// Retrieves a list of skills for the authenticated user, optionally filtered
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<SkillDto>>>> GetSkills(
@@ -34,7 +35,8 @@ public class SkillsController : ControllerBase
     }
     
     /// <summary>
-    /// Get skill by ID
+    /// <summary>
+    /// Retrieves detailed information for a specific skill by ID
     /// </summary>
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ApiResponse<SkillDto>>> GetSkill(int id)
@@ -52,7 +54,8 @@ public class SkillsController : ControllerBase
     }
     
     /// <summary>
-    /// Get public skill by slug
+    /// <summary>
+    /// Retrieves a public skill by its unique slug
     /// </summary>
     [HttpGet("public/{slug}")]
     public async Task<ActionResult<ApiResponse<SkillDto>>> GetPublicSkill(string slug)
@@ -66,7 +69,8 @@ public class SkillsController : ControllerBase
     }
     
     /// <summary>
-    /// Create new skill
+    /// <summary>
+    /// Creates a new skill in the user's portfolio
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<ApiResponse<SkillDto>>> CreateSkill([FromBody] CreateSkillRequest request)
@@ -89,7 +93,8 @@ public class SkillsController : ControllerBase
     }
     
     /// <summary>
-    /// Update skill
+    /// <summary>
+    /// Updates an existing skill's properties
     /// </summary>
     [HttpPut("{id:int}")]
     public async Task<ActionResult<ApiResponse<SkillDto>>> UpdateSkill(int id, [FromBody] UpdateSkillRequest request)
@@ -107,7 +112,8 @@ public class SkillsController : ControllerBase
     }
     
     /// <summary>
-    /// Delete skill
+    /// <summary>
+    /// Deletes a skill and its associated data
     /// </summary>
     [HttpDelete("{id:int}")]
     public async Task<ActionResult<ApiResponse<bool>>> DeleteSkill(int id)
@@ -125,7 +131,8 @@ public class SkillsController : ControllerBase
     }
     
     /// <summary>
-    /// Get all categories
+    /// <summary>
+    /// Retrieves all available skill categories
     /// </summary>
     [HttpGet("categories")]
     public async Task<ActionResult<ApiResponse<List<CategoryDto>>>> GetCategories()

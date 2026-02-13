@@ -88,6 +88,7 @@ public class SkillDto
     public decimal TotalHoursLogged { get; set; }
     public decimal? TargetHours { get; set; }
     public string Visibility { get; set; } = "private";
+    public string? PublicSlug { get; set; }
     public DateTime? TargetDate { get; set; }
     public string Status { get; set; } = "not_started";
     public string? Icon { get; set; }

@@ -36,7 +36,7 @@ public class AiPlanService : IAiPlanService
     
     public async Task<AiPlanResponse> GeneratePlanAsync(int userId, AiPlanRequest request)
     {
-        // Simply get the key and trim whitespace
+        // Retrieves the API key and validates configuration
         var apiKey = _configuration["GeminiAI:ApiKey"]?.Trim();
         
         if (string.IsNullOrEmpty(apiKey))
@@ -213,10 +213,10 @@ Respond with ONLY the updated Goal JSON object.";
         // Ask for clarification if goal is vague or missing key details
         var goal = request.GoalDescription.ToLower();
         
-        // Short goals likely need clarification
+        // Simple heuristic: Short goals likely need more detail
         if (goal.Split(' ').Length < 5) return true;
         
-        // Vague terms that need clarification
+        // Checks for vague keywords that indicate a need for clarification
         var vagueTerms = new[] { "learn", "get better at", "improve", "master", "understand" };
         if (vagueTerms.Any(v => goal.Contains(v)) && request.Clarifications.Count == 0)
             return true;

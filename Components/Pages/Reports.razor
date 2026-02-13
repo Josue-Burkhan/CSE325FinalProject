@@ -36,10 +36,10 @@
                 {
                     var maxHours = weeklyActivity.Any() ? weeklyActivity.Max(w => w.HoursLogged) : 1;
                     var heightBytes = maxHours > 0 ? Math.Max(10, (week.HoursLogged / (decimal)Math.Max(1, maxHours)) * 100) : 10;
-                    var height = (int)heightBytes; // Cast to int to avoid locale comma issues (e.g. "33,3%")
+                    var height = (int)heightBytes; // Casts to int to prevent locale-specific formatting issues in CSS style string
                     
                     <div class="flex-1 flex flex-col items-center gap-2 group relative">
-                        <!-- Use bg-teal-500 to ensure visibility, cast height to int -->
+                        <!-- Uses teal-500 for visibility and applies calculated height -->
                         <div class="w-full bg-teal-500 rounded-t-lg transition-all hover:bg-teal-600" style="height: @height%"></div>
                         <span class="text-xs text-text-secondary dark:text-gray-500 truncate">W@(week.WeekNumber)</span>
                         
@@ -112,7 +112,7 @@
             stats = await ProgressLogService.GetDashboardStatsAsync(userId);
             weeklyActivity = await ProgressLogService.GetWeeklyActivityAsync(userId, 12);
             
-            // Get recent logs using paginated method
+            // Retrieves recent logs using the paginated API
             var logsResponse = await ProgressLogService.GetUserLogsAsync(userId, 1, 10);
             recentLogs = logsResponse.Items;
         }

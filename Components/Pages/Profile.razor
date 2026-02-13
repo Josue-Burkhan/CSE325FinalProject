@@ -210,6 +210,9 @@
         await LoadUser();
     }
 
+    /// <summary>
+    /// Fetches current user details from the database using ID from auth state
+    /// </summary>
     private async Task LoadUser()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -231,6 +234,9 @@
         }
     }
 
+    /// <summary>
+    /// Reverts changes and exits edit mode
+    /// </summary>
     private void CancelEdit()
     {
         isEditing = false;
@@ -254,7 +260,7 @@
         var file = e.File;
         if (file != null)
         {
-            // Validations
+            // Validates file size (max 5MB)
             if (file.Size > 5 * 1024 * 1024) // 5MB
             {
                 errorMessage = "Image must be smaller than 5MB";
@@ -263,7 +269,7 @@
 
             uploadedFile = file;
             
-            // Create preview
+            // Creates a local preview of the image
             var format = "image/png";
             using var memoryStream = new MemoryStream();
             await file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(memoryStream);
@@ -273,6 +279,9 @@
         }
     }
 
+    /// <summary>
+    /// Persists user profile changes and handles image saving
+    /// </summary>
     private async Task SaveProfile()
     {
         isSaving = true;
@@ -283,7 +292,7 @@
         {
             if (user == null) return;
 
-            // Handle file upload if exists
+            // Handles file upload if a new image was selected
             if (uploadedFile != null)
             {
                 var uploadsFolder = Path.Combine(Environment.WebRootPath, "uploads", "avatars");
@@ -300,7 +309,7 @@
                 user.AvatarUrl = $"/uploads/avatars/{fileName}";
             }
 
-            // Update user details
+            // Updates user details in the database
             user.FirstName = editModel.FirstName ?? user.FirstName;
             user.LastName = editModel.LastName ?? user.LastName;
             user.JobTitle = editModel.JobTitle;
@@ -309,7 +318,7 @@
 
             await DbContext.SaveChangesAsync();
             
-            // Force reload to update AuthenticationState and UI (header, sidebar)
+            // Forces a full page reload to refresh AuthenticationState and UI components
             Navigation.NavigateTo("/profile", forceLoad: true);
         }
         catch (Exception ex)

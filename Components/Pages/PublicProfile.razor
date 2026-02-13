@@ -125,9 +125,13 @@ else
     public int UserId { get; set; }
 
     private UserDto? user;
+
     private List<SkillDto> publicSkills = new();
     private bool loading = true;
 
+    /// <summary>
+    /// Reacts to changes in route parameters to load the appropriate user profile
+    /// </summary>
     protected override async Task OnParametersSetAsync()
     {
         loading = true;

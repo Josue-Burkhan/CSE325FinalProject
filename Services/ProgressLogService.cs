@@ -73,7 +73,7 @@ public class ProgressLogService : IProgressLogService
     
     public async Task<ProgressLogDto> CreateLogAsync(int userId, CreateProgressLogRequest request)
     {
-        // Verify skill belongs to user
+        // Verifies the skill belongs to the authorized user
         var skill = await _context.Skills.FirstOrDefaultAsync(s => s.Id == request.SkillId && s.UserId == userId);
         if (skill == null)
         {
@@ -107,7 +107,7 @@ public class ProgressLogService : IProgressLogService
         _context.ProgressLogs.Add(progressLog);
         await _context.SaveChangesAsync();
         
-        // Mark milestones as completed
+        // Updates the status of associated milestones to completed
         if (request.CompletedMilestoneIds.Any())
         {
             foreach (var milestoneId in request.CompletedMilestoneIds)
@@ -140,7 +140,7 @@ public class ProgressLogService : IProgressLogService
         // Update skill progress
         await _skillService.UpdateSkillProgressAsync(request.SkillId);
         
-        // Update daily stats
+        // Recalculates daily statistics for the user
         await UpdateDailyStatsAsync(userId, request.LogDate.Date);
         
         return (await GetLogByIdAsync(progressLog.Id, userId))!;
@@ -188,7 +188,7 @@ public class ProgressLogService : IProgressLogService
             .Where(p => p.UserId == userId)
             .ToListAsync();
         
-        // Calculate streak
+        // Calculates the current verified streak of activity
         var streak = await CalculateStreakAsync(userId);
         
         // Overall progress
@@ -214,7 +214,7 @@ public class ProgressLogService : IProgressLogService
         var result = new List<WeeklyActivityDto>();
         var today = DateTime.UtcNow.Date;
         
-        // Align to Monday of current week
+        // Aligns the start date to the Monday of the current week for consistent charting
         var currentDayOfWeek = (int)today.DayOfWeek; // Sunday=0, Monday=1...
         var daysToSubtract = (currentDayOfWeek == 0) ? 6 : currentDayOfWeek - 1;
         var currentWeekStart = today.AddDays(-daysToSubtract);
@@ -299,7 +299,7 @@ public class ProgressLogService : IProgressLogService
         var today = DateTime.UtcNow.Date;
         var checkDate = today;
         
-        // Allow for missing today (check if yesterday counts)
+        // Checks if the streak allows for a missing "today" (e.g., accessed early in the day)
         if (!dates.Contains(today))
         {
             checkDate = today.AddDays(-1);

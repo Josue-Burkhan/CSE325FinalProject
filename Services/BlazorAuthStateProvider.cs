@@ -20,6 +20,7 @@ public class BlazorAuthStateProvider : AuthenticationStateProvider
     {
         var httpContext = _httpContextAccessor.HttpContext;
         
+        // Returns the authentication state based on the current HTTP context user
         if (httpContext?.User?.Identity?.IsAuthenticated == true)
         {
             return Task.FromResult(new AuthenticationState(httpContext.User));
@@ -29,7 +30,7 @@ public class BlazorAuthStateProvider : AuthenticationStateProvider
     }
 
     /// <summary>
-    /// Call this after login/logout to update the authentication state
+    /// Notifies components that the authentication state has changed
     /// </summary>
     public void NotifyAuthenticationStateChanged()
     {

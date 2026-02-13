@@ -74,7 +74,7 @@ public class SkillService : ISkillService
         
         if (skill == null) return null;
         
-        // Check access: Public OR Owner
+        // Verifies access rights: Public visibility OR Owner ownership
         var isOwner = userId.HasValue && skill.UserId == userId.Value;
         var isPublic = skill.Visibility == "public";
         
@@ -109,6 +109,7 @@ public class SkillService : ISkillService
             Color = request.Color,
             Status = "in_progress",
             StartedAt = DateTime.UtcNow,
+            // Generates a unique URL slug for public sharing
             PublicSlug = request.Visibility == "public" ? GenerateSlug(request.Name) : null,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -247,17 +248,17 @@ public class SkillService : ISkillService
         var skill = await _context.Skills
             .Include(s => s.Goals).ThenInclude(g => g.Milestones)
             .Include(s => s.ProgressLogs)
-            .Include(s => s.Schedule).ThenInclude(sch => sch.ScheduleDays)
+            .Include(s => s.Schedule!).ThenInclude(sch => sch.ScheduleDays)
             .FirstOrDefaultAsync(s => s.Id == skillId && s.UserId == userId);
         
         if (skill == null) return false;
         
-        // Manual cascade delete 
-        // 1. Logs
+        // Cascade deletes associated data manually to ensure integrity
+        // 1. Removes all progress logs associated with the skill
         if (skill.ProgressLogs != null && skill.ProgressLogs.Any())
             _context.ProgressLogs.RemoveRange(skill.ProgressLogs);
             
-        // 2. Schedule
+        // 2. Removes the schedule and its days
         if (skill.Schedule != null)
         {
             if (skill.Schedule.ScheduleDays != null)
@@ -312,14 +313,15 @@ public class SkillService : ISkillService
         // Calculate total hours
         skill.TotalHoursLogged = skill.ProgressLogs.Sum(p => p.HoursLogged);
         
-        // Calculate mastery percentage
+        // Calculates mastery based on goal completion or time spent
         if (skill.Goals.Any())
         {
-            // Calculate based on average progress of all goals
+            // Averages the progress of all associated goals
             skill.MasteryPercentage = skill.Goals.Average(g => g.ProgressPercentage);
         }
         else if (skill.TargetHours.HasValue && skill.TargetHours > 0)
         {
+            // Calculates percentage based on logged hours vs target hours
             skill.MasteryPercentage = Math.Min(100, (skill.TotalHoursLogged / skill.TargetHours.Value) * 100);
         }
         
@@ -356,6 +358,7 @@ public class SkillService : ISkillService
             TotalHoursLogged = skill.TotalHoursLogged,
             TargetHours = skill.TargetHours,
             Visibility = skill.Visibility,
+            PublicSlug = skill.PublicSlug,
             TargetDate = skill.TargetDate,
             Status = skill.Status,
             Icon = skill.Icon,

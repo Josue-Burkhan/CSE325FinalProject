@@ -36,10 +36,18 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.C
         options.LoginPath = "/login";
         options.LogoutPath = "/logout";
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        // Allow cookies over HTTP in development
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
             ? CookieSecurePolicy.None 
             : CookieSecurePolicy.Always;
+    })
+    .AddGitHub(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:GitHub:ClientId"] ?? "PLACEHOLDER_CLIENT_ID";
+        options.ClientSecret = builder.Configuration["Authentication:GitHub:ClientSecret"] ?? "PLACEHOLDER_CLIENT_SECRET";
+        options.CallbackPath = "/signin-github";
+        options.Scope.Add("user:email");
+        // Save tokens to allow retrieving them later if needed
+        options.SaveTokens = true;
     });
 
 builder.Services.AddScoped<AuthenticationStateProvider, BlazorAuthStateProvider>();
