@@ -313,14 +313,14 @@ public class SkillService : ISkillService
         skill.TotalHoursLogged = skill.ProgressLogs.Sum(p => p.HoursLogged);
         
         // Calculate mastery percentage
-        if (skill.TargetHours.HasValue && skill.TargetHours > 0)
+        if (skill.Goals.Any())
+        {
+            // Calculate based on average progress of all goals
+            skill.MasteryPercentage = skill.Goals.Average(g => g.ProgressPercentage);
+        }
+        else if (skill.TargetHours.HasValue && skill.TargetHours > 0)
         {
             skill.MasteryPercentage = Math.Min(100, (skill.TotalHoursLogged / skill.TargetHours.Value) * 100);
-        }
-        else if (skill.Goals.Any())
-        {
-            var completedGoals = skill.Goals.Count(g => g.Status == "completed");
-            skill.MasteryPercentage = (completedGoals / (decimal)skill.Goals.Count) * 100;
         }
         
         skill.UpdatedAt = DateTime.UtcNow;
@@ -372,6 +372,7 @@ public class SkillService : ISkillService
             GoalsCount = skill.Goals?.Count ?? 0,
             CompletedGoalsCount = skill.Goals?.Count(g => g.Status == "completed") ?? 0,
             LogsCount = skill.ProgressLogs?.Count ?? 0,
+            ViewCount = skill.ViewCount,
             Logs = skill.ProgressLogs?
                 .OrderByDescending(l => l.LogDate)
                 .Select(l => new ProgressLogDto

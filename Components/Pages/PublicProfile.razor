@@ -1,0 +1,204 @@
+@page "/u/{UserId:int}"
+@using CSE325FinalProject.Models
+@using CSE325FinalProject.Services
+@inject ISkillService SkillService
+@inject ApplicationDbContext DbContext
+@inject NavigationManager Navigation
+
+<PageTitle>@(user?.FullName ?? "Profile") - SkillTracker</PageTitle>
+
+@if (loading)
+{
+    <div class="flex justify-center items-center py-20">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+}
+else if (user == null)
+{
+    <div class="text-center py-20">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">User Not Found</h2>
+        <p class="text-gray-500 mt-2">The user you are looking for does not exist.</p>
+        <a href="/" class="mt-4 inline-block px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition">Go Home</a>
+    </div>
+}
+else
+{
+    <div class="max-w-4xl mx-auto space-y-8 pb-12">
+        <!-- Profile Header -->
+        <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-8 border border-gray-100 dark:border-gray-800 text-center md:text-left">
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <!-- Avatar -->
+                <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-gray-700 shadow-lg shrink-0">
+                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                    {
+                        <img src="@user.AvatarUrl" alt="@user.FullName" class="w-full h-full object-cover" />
+                    }
+                    else
+                    {
+                        <div class="w-full h-full bg-primary/10 flex items-center justify-center text-4xl font-bold text-primary">
+                            @user.Initials
+                        </div>
+                    }
+                </div>
+                
+                <!-- Info -->
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold text-text-main dark:text-white">@user.FullName</h1>
+                    @if (!string.IsNullOrEmpty(user.JobTitle))
+                    {
+                        <p class="text-lg text-primary font-medium mt-1">@user.JobTitle</p>
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(user.Bio))
+                    {
+                        <p class="text-text-secondary dark:text-gray-400 mt-4 max-w-2xl">@user.Bio</p>
+                    }
+                    
+                    <div class="flex items-center gap-6 mt-6 text-sm text-text-secondary dark:text-gray-400 justify-center md:justify-start">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                            Joined @user.CreatedAt.ToString("MMMM yyyy")
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">school</span>
+                            @publicSkills.Count Public Skills
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Public Skills -->
+        <div class="space-y-6">
+            <h2 class="text-2xl font-bold text-text-main dark:text-white px-2">Public Skills</h2>
+            
+            @if (publicSkills.Any())
+            {
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    @foreach (var skill in publicSkills)
+                    {
+                        <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                    <span class="material-symbols-outlined">@(skill.Icon ?? "school")</span>
+                                </div>
+                                <div class="flex items-center gap-1 text-sm text-text-secondary dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-full">
+                                    <span class="material-symbols-outlined text-[14px]">visibility</span>
+                                    <span>@skill.ViewCount</span>
+                                </div>
+                            </div>
+                            
+                            <h3 class="text-xl font-bold text-text-main dark:text-white mb-2">@skill.Name</h3>
+                            
+                            @if (!string.IsNullOrEmpty(skill.Description))
+                            {
+                                <p class="text-text-secondary dark:text-gray-400 text-sm line-clamp-2 mb-4">@skill.Description</p>
+                            }
+                            
+                            <!-- Progress Bar -->
+                            <div class="mt-auto">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="font-medium text-text-secondary dark:text-gray-400">Mastery</span>
+                                    <span class="font-bold text-text-main dark:text-white">@Math.Round(skill.MasteryPercentage)%</span>
+                                </div>
+                                <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                                    <div class="bg-primary h-2 rounded-full transition-all duration-500" style="width: @Math.Min(100, skill.MasteryPercentage)%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-12 bg-surface-light dark:bg-surface-dark rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                    <span class="material-symbols-outlined text-4xl text-gray-300 dark:text-gray-600 mb-2">visibility_off</span>
+                    <p class="text-text-secondary dark:text-gray-400">This user hasn't shared any skills publicly yet.</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int UserId { get; set; }
+
+    private UserDto? user;
+    private List<SkillDto> publicSkills = new();
+    private bool loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        try
+        {
+            // Allow anonymous access to basic user info for profile display
+            // We use DbContext directly for speed/simplicity in this specific read-only view
+            // OR we can add a method to AuthService. ideally service layer.
+            // For now, let's query DB context directly for the User entity then map to DTO
+            var userEntity = await DbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == UserId);
+
+            if (userEntity != null)
+            {
+                user = new UserDto
+                {
+                    Id = userEntity.Id,
+                    FirstName = userEntity.FirstName,
+                    LastName = userEntity.LastName,
+                    FullName = $"{userEntity.FirstName} {userEntity.LastName}",
+                    JobTitle = userEntity.JobTitle,
+                    Bio = userEntity.Bio,
+                    AvatarUrl = userEntity.AvatarUrl,
+                    Initials = $"{userEntity.FirstName[0]}{userEntity.LastName[0]}".ToUpper()
+                };
+
+                // Get Public Skills
+                // Use SkillService or direct query? SkillService `GetUserSkillsAsync` might filter by logged in user.
+                // Let's use direct query to be safe and only get PUBLIC skills.
+                var skillsQuery = DbContext.Skills
+                    .Include(s => s.Category)
+                    .Include(s => s.Goals) // For stats if needed
+                    .Where(s => s.UserId == UserId && s.Visibility == "public")
+                    .OrderByDescending(s => s.MasteryPercentage);
+
+                var skillsList = await skillsQuery.ToListAsync();
+                
+                // Increment view counts (background task style - fire and forget or await but verify concurrency)
+                // We'll increment view counts for these skills
+                if (skillsList.Any())
+                {
+                    foreach(var s in skillsList)
+                    {
+                        // Create a separate context usage or raw SQL to avoid tracking issues if we are just reading
+                        // Actually, let's just use ExecuteSqlRaw to bulk update for performance
+                         await DbContext.Database.ExecuteSqlRawAsync(
+                            "UPDATE skills SET view_count = view_count + 1 WHERE id = {0}", s.Id);
+                    }
+                }
+
+                publicSkills = skillsList.Select(s => new SkillDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    Icon = s.Icon,
+                    MasteryPercentage = s.MasteryPercentage,
+                    ViewCount = s.ViewCount, // Note: this will show count BEFORE increment, which is fine
+                    Category = s.Category != null ? new CategoryDto { Name = s.Category.Name } : null,
+                    Visibility = s.Visibility
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading profile: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}

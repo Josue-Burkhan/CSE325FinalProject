@@ -214,19 +214,41 @@ public class ProgressLogService : IProgressLogService
         var result = new List<WeeklyActivityDto>();
         var today = DateTime.UtcNow.Date;
         
-        for (int i = weeks - 1; i >= 0; i--)
+        // Align to Monday of current week
+        var currentDayOfWeek = (int)today.DayOfWeek; // Sunday=0, Monday=1...
+        var daysToSubtract = (currentDayOfWeek == 0) ? 6 : currentDayOfWeek - 1;
+        var currentWeekStart = today.AddDays(-daysToSubtract);
+        
+        // Calculate start date for the whole period
+        // providing 'weeks' number of full (or partial current) weeks
+        var overallStart = currentWeekStart.AddDays(-(7 * (weeks - 1)));
+        
+        // Fetch all relevant logs in one query
+        var logs = await _context.ProgressLogs
+             .Where(p => p.UserId == userId && p.LogDate >= overallStart)
+             .Select(p => new { p.LogDate, p.HoursLogged })
+             .ToListAsync();
+
+        for (int i = 0; i < weeks; i++)
         {
-            var weekEnd = today.AddDays(-7 * i);
-            var weekStart = weekEnd.AddDays(-6);
+            var weekStart = overallStart.AddDays(i * 7);
+            var weekEnd = weekStart.AddDays(6);
             
-            var hoursLogged = await _context.ProgressLogs
-                .Where(p => p.UserId == userId && p.LogDate >= weekStart && p.LogDate <= weekEnd)
-                .SumAsync(p => p.HoursLogged);
+            var hoursLogged = logs
+                .Where(l => l.LogDate >= weekStart && l.LogDate <= weekEnd)
+                .Sum(l => l.HoursLogged);
             
+            // Format label nicely
+            string label;
+            if (weekStart.Year != weekEnd.Year)
+                label = $"{weekStart:MMM d} - {weekEnd:MMM d, yyyy}";
+            else
+                label = $"{weekStart:MMM d} - {weekEnd:MMM d}";
+
             result.Add(new WeeklyActivityDto
             {
-                WeekNumber = i + 1,
-                WeekLabel = $"{weekStart:MMM d} - {weekEnd:MMM d}",
+                WeekNumber = i + 1, // Just an index for the chart
+                WeekLabel = label,
                 HoursLogged = hoursLogged
             });
         }

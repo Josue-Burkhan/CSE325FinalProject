@@ -4,13 +4,24 @@
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject ApplicationDbContext DbContext
+@inject IWebHostEnvironment Environment
 
-<PageTitle>Profile Settings - SkillTracker</PageTitle>
+<PageTitle>Profile - SkillTracker</PageTitle>
 
-<div class="max-w-3xl mx-auto flex flex-col gap-8">
-    <header>
-        <h1 class="text-3xl font-bold text-text-main dark:text-white">Profile Settings</h1>
-        <p class="text-text-secondary dark:text-gray-400 mt-1">Manage your account and preferences</p>
+<div class="max-w-3xl mx-auto flex flex-col gap-8 pb-12">
+    <header class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-text-main dark:text-white">Profile</h1>
+            <p class="text-text-secondary dark:text-gray-400 mt-1">Manage your personal information</p>
+        </div>
+        @if (!isEditing)
+        {
+            <button @onclick="() => isEditing = true" class="px-6 h-10 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">edit</span>
+                Edit Profile
+            </button>
+        }
     </header>
     
     @if (!string.IsNullOrEmpty(successMessage))
@@ -29,58 +40,133 @@
     
     <!-- Profile Card -->
     <div class="bg-surface-light dark:bg-surface-dark rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-        <div class="p-6 md:p-8 border-b border-gray-100 dark:border-gray-800">
-            <h2 class="text-xl font-bold text-text-main dark:text-white mb-6">Personal Information</h2>
-            
-            <div class="flex flex-col md:flex-row gap-6 items-start">
-                <!-- Avatar -->
-                <div class="flex flex-col items-center gap-3">
-                    <div class="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-primary-dark dark:text-primary text-2xl font-bold">
-                        @initials
+        
+        @if (!isEditing)
+        {
+            <!-- VIEW MODE -->
+            <div class="p-8">
+                <div class="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
+                     <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-gray-700 shadow-lg shrink-0">
+                        @if (!string.IsNullOrEmpty(user?.AvatarUrl))
+                        {
+                            <img src="@user.AvatarUrl" alt="@user.FullName" class="w-full h-full object-cover" />
+                        }
+                        else
+                        {
+                            <div class="w-full h-full bg-primary/10 flex items-center justify-center text-4xl font-bold text-primary">
+                                @user?.Initials
+                            </div>
+                        }
                     </div>
-                    <button class="text-sm text-primary hover:underline font-medium">Change Photo</button>
-                </div>
-                
-                <!-- Form -->
-                <div class="flex-1 space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">First Name</label>
-                            <input @bind="firstName" class="w-full h-11 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white" />
+                     <div class="flex-1">
+                        <h2 class="text-2xl font-bold text-text-main dark:text-white">@user?.FullName</h2>
+                        <p class="text-primary font-medium mt-1">@user?.JobTitle</p>
+                        <p class="text-text-secondary dark:text-gray-400 mt-4">@(string.IsNullOrEmpty(user?.Bio) ? "No bio yet." : user.Bio)</p>
+                        
+                        <div class="mt-6 flex flex-wrap gap-4 justify-center md:justify-start">
+                            <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-lg text-sm text-text-secondary dark:text-gray-400">
+                                <span class="block text-xs uppercase tracking-wider font-semibold mb-1">Email</span>
+                                @user?.Email
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-lg text-sm text-text-secondary dark:text-gray-400">
+                                <span class="block text-xs uppercase tracking-wider font-semibold mb-1">Joined</span>
+                                @user?.CreatedAt.ToString("MMMM yyyy")
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Last Name</label>
-                            <input @bind="lastName" class="w-full h-11 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white" />
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Email</label>
-                        <input @bind="email" type="email" class="w-full h-11 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Job Title</label>
-                        <input @bind="jobTitle" class="w-full h-11 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white" placeholder="e.g., Software Developer" />
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="p-6 md:p-8 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
-            <button @onclick="SaveProfile" disabled="@isSaving" class="flex items-center gap-2 px-6 h-11 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-all disabled:opacity-50">
-                @if (isSaving)
-                {
-                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-text-main"></div>
-                }
-                else
-                {
-                    <span class="material-symbols-outlined text-[18px]">save</span>
-                }
-                Save Changes
-            </button>
-        </div>
+        }
+        else
+        {
+            <!-- EDIT MODE -->
+            <div class="p-6 md:p-8">
+                <h2 class="text-xl font-bold text-text-main dark:text-white mb-6">Edit Information</h2>
+                
+                <EditForm Model="@editModel" OnValidSubmit="SaveProfile">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="flex flex-col md:flex-row gap-8 items-start">
+                        <!-- Avatar Upload -->
+                        <div class="flex flex-col items-center gap-3 shrink-0">
+                            <div class="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden relative group">
+                                @if (previewImage != null)
+                                {
+                                    <img src="@previewImage" class="w-full h-full object-cover" />
+                                }
+                                else if (!string.IsNullOrEmpty(user?.AvatarUrl))
+                                {
+                                    <img src="@user.AvatarUrl" class="w-full h-full object-cover" />
+                                }
+                                else
+                                {
+                                    <div class="flex items-center justify-center w-full h-full text-gray-400">
+                                        <span class="material-symbols-outlined text-4xl">person</span>
+                                    </div>
+                                }
+                                
+                                <label class="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                                    <span class="material-symbols-outlined">photo_camera</span>
+                                    <InputFile OnChange="HandleFileSelected" class="hidden" accept=".jpg,.jpeg,.png" />
+                                </label>
+                            </div>
+                            <span class="text-xs text-secondary text-center">Click image to change</span>
+                        </div>
+                        
+                        <!-- Form Fields -->
+                        <div class="flex-1 space-y-4 w-full">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">First Name</label>
+                                    <InputText @bind-Value="editModel.FirstName" class="w-full h-11 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white form-input" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Last Name</label>
+                                    <InputText @bind-Value="editModel.LastName" class="w-full h-11 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white form-input" />
+                                </div>
+                            </div>
+                            
+                            <!-- Email Readonly -->
+                             <div>
+                                <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Email</label>
+                                <input value="@user?.Email" disabled class="w-full h-11 px-4 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 cursor-not-allowed" />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Job Title</label>
+                                <InputText @bind-Value="editModel.JobTitle" class="w-full h-11 px-4 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white form-input" placeholder="e.g., Software Developer" />
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-semibold text-text-main dark:text-white mb-2">Bio</label>
+                                <InputTextArea @bind-Value="editModel.Bio" class="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-text-main dark:text-white form-input min-h-[100px]" placeholder="Tell us about yourself..." />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-3 mt-8">
+                        <button type="button" @onclick="CancelEdit" class="px-6 h-11 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-text-main dark:text-white font-medium rounded-lg transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled="@isSaving" class="flex items-center gap-2 px-6 h-11 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-all disabled:opacity-50">
+                            @if (isSaving)
+                            {
+                                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-text-main"></div>
+                            }
+                            else
+                            {
+                                <span class="material-symbols-outlined text-[18px]">save</span>
+                            }
+                            Save Changes
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        }
     </div>
     
-    <!-- Theme Preference -->
+    <!-- Theme Preference (Only visible in edit mode or separate settings tab?) -> Keep visible always at bottom -->
     <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-6 md:p-8 border border-gray-100 dark:border-gray-800">
         <h2 class="text-xl font-bold text-text-main dark:text-white mb-6">Appearance</h2>
         <div class="flex items-center justify-between">
@@ -94,7 +180,7 @@
         </div>
     </div>
     
-    <!-- Danger Zone -->
+    <!-- Danger Zone only on edit/settings -->
     <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-6 md:p-8 border border-red-200 dark:border-red-900">
         <h2 class="text-xl font-bold text-red-600 dark:text-red-400 mb-4">Danger Zone</h2>
         <div class="flex items-center justify-between">
@@ -110,23 +196,81 @@
 </div>
 
 @code {
-    private string firstName = "";
-    private string lastName = "";
-    private string email = "";
-    private string jobTitle = "";
-    private string initials = "";
-    private bool isSaving;
+    private User? user;
+    private UpdateProfileRequest editModel = new();
+    private bool isEditing = false;
+    private bool isSaving = false;
     private string? successMessage;
     private string? errorMessage;
+    private IBrowserFile? uploadedFile;
+    private string? previewImage;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadUser();
+    }
+
+    private async Task LoadUser()
+    {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdStr = authState.User.FindFirst("userId")?.Value;
         
-        firstName = authState.User.FindFirst("firstName")?.Value ?? "";
-        lastName = authState.User.FindFirst("lastName")?.Value ?? "";
-        email = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
-        initials = authState.User.FindFirst("initials")?.Value ?? "";
+        if (int.TryParse(userIdStr, out int userId))
+        {
+             user = await DbContext.Users.FindAsync(userId);
+             if (user != null)
+             {
+                 editModel = new UpdateProfileRequest
+                 {
+                     FirstName = user.FirstName,
+                     LastName = user.LastName,
+                     JobTitle = user.JobTitle,
+                     Bio = user.Bio
+                 };
+             }
+        }
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        previewImage = null;
+        uploadedFile = null;
+        // Reset model
+        if (user != null)
+        {
+            editModel = new UpdateProfileRequest
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                JobTitle = user.JobTitle,
+                Bio = user.Bio
+            };
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            // Validations
+            if (file.Size > 5 * 1024 * 1024) // 5MB
+            {
+                errorMessage = "Image must be smaller than 5MB";
+                return;
+            }
+
+            uploadedFile = file;
+            
+            // Create preview
+            var format = "image/png";
+            using var memoryStream = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(memoryStream);
+            var buffer = memoryStream.ToArray();
+            var imageData = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+            previewImage = imageData;
+        }
     }
 
     private async Task SaveProfile()
@@ -137,9 +281,36 @@
 
         try
         {
-            // TODO: Implement profile update
-            await Task.Delay(500); // Simulate save
-            successMessage = "Profile updated successfully!";
+            if (user == null) return;
+
+            // Handle file upload if exists
+            if (uploadedFile != null)
+            {
+                var uploadsFolder = Path.Combine(Environment.WebRootPath, "uploads", "avatars");
+                Directory.CreateDirectory(uploadsFolder);
+                
+                var fileName = $"{user.Id}_{Guid.NewGuid()}{Path.GetExtension(uploadedFile.Name)}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+                
+                await using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await uploadedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(stream);
+                }
+                
+                user.AvatarUrl = $"/uploads/avatars/{fileName}";
+            }
+
+            // Update user details
+            user.FirstName = editModel.FirstName ?? user.FirstName;
+            user.LastName = editModel.LastName ?? user.LastName;
+            user.JobTitle = editModel.JobTitle;
+            user.Bio = editModel.Bio;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await DbContext.SaveChangesAsync();
+            
+            // Force reload to update AuthenticationState and UI (header, sidebar)
+            Navigation.NavigateTo("/profile", forceLoad: true);
         }
         catch (Exception ex)
         {

@@ -67,6 +67,8 @@ public class UserDto
     public string Initials { get; set; } = string.Empty;
     public string? JobTitle { get; set; }
     public string? AvatarUrl { get; set; }
+    public string? Bio { get; set; }
+    public DateTime CreatedAt { get; set; }
     public string ThemePreference { get; set; } = "light";
 }
 
@@ -95,6 +97,7 @@ public class SkillDto
     public int GoalsCount { get; set; }
     public int CompletedGoalsCount { get; set; }
     public int LogsCount { get; set; }
+    public int ViewCount { get; set; }
     public List<ProgressLogDto> Logs { get; set; } = new();
 }
 

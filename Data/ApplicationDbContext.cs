@@ -145,6 +145,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.TargetHours).HasColumnName("target_hours");
             entity.Property(e => e.Visibility).HasColumnName("visibility");
             entity.Property(e => e.PublicSlug).HasColumnName("public_slug");
+            entity.Property(e => e.ViewCount).HasColumnName("view_count");
             entity.Property(e => e.TargetDate).HasColumnName("target_date");
             entity.Property(e => e.StartedAt).HasColumnName("started_at");
             entity.Property(e => e.CompletedAt).HasColumnName("completed_at");

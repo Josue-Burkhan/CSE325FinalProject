@@ -63,6 +63,9 @@ public class Skill
     [MaxLength(100)]
     public string? PublicSlug { get; set; }
     
+    [Column("view_count")]
+    public int ViewCount { get; set; } = 0;
+    
     public DateTime? TargetDate { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
