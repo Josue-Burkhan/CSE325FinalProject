@@ -64,8 +64,16 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
     app.UseHsts();
-    app.UseHttpsRedirection(); // Only redirect to HTTPS in production
 }
+
+// Configure Forwarded Headers for Render/Proxies
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
+                       Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
+
+app.UseHttpsRedirection(); // Only redirect to HTTPS in production
 
 // Initialize Database (Add missing columns)
 using (var scope = app.Services.CreateScope())
