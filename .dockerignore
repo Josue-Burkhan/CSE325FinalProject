@@ -1,0 +1,27 @@
+# Build results
+**/bin/
+**/obj/
+**/out/
+
+# User specific files
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Environment variables
+.env
+appsettings.Development.json
+appsettings.Local.json
+
+# Tests
+tests/

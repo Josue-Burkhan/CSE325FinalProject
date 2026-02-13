@@ -42,3 +42,7 @@ publish/
 
 PROJECT_SUMMARY.txt
 database_schema.sql
+
+# Local Environment Variables
+.env
+.env.*
