@@ -6,6 +6,7 @@
 @inject NavigationManager Navigation
 @inject ApplicationDbContext DbContext
 @inject IWebHostEnvironment Environment
+@inject IImageService ImageService
 
 <PageTitle>Profile - SkillTracker</PageTitle>
 
@@ -295,18 +296,7 @@
             // Handles file upload if a new image was selected
             if (uploadedFile != null)
             {
-                var uploadsFolder = Path.Combine(Environment.WebRootPath, "uploads", "avatars");
-                Directory.CreateDirectory(uploadsFolder);
-                
-                var fileName = $"{user.Id}_{Guid.NewGuid()}{Path.GetExtension(uploadedFile.Name)}";
-                var filePath = Path.Combine(uploadsFolder, fileName);
-                
-                await using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await uploadedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(stream);
-                }
-                
-                user.AvatarUrl = $"/uploads/avatars/{fileName}";
+                user.AvatarUrl = await ImageService.ProcessAndSaveAvatarAsync(uploadedFile, Environment.WebRootPath);
             }
 
             // Updates user details in the database

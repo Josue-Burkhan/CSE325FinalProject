@@ -23,6 +23,7 @@ builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IGoalService, GoalService>();
 builder.Services.AddScoped<IProgressLogService, ProgressLogService>();
 builder.Services.AddScoped<IAiPlanService, AiPlanService>();
+builder.Services.AddScoped<IImageService, ImageService>();
 
 // HTTP Client for AI service
 builder.Services.AddHttpClient<IAiPlanService, AiPlanService>();
