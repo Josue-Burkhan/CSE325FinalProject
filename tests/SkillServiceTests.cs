@@ -49,7 +49,7 @@ public class SkillServiceTests
         Assert.Equal("Test Skill", result.Name);
         Assert.Equal("in_progress", result.Status);
         Assert.Equal(userId, result.UserId);
-        Assert.Null(result.PublicSlug); // Private skill should have no slug
+        Assert.Null(result.PublicSlug);
     }
 
     [Fact]
@@ -77,6 +77,72 @@ public class SkillServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("public", result.Visibility);
-        Assert.NotNull(service.GetSkillBySlugAsync(result.PublicSlug)); // Slug should be generated
+        Assert.NotNull(service.GetSkillBySlugAsync(result.PublicSlug));
+    }
+
+    [Fact]
+    public async Task UpdateSkillAsync_ShouldUpdateProperties_WhenSkillExists()
+    {
+        // Arrange
+        using var context = GetInMemoryDbContext();
+        var user = new User { Id = 1, FirstName = "Test", LastName = "User", Email = "test@example.com", PasswordHash = "hash" };
+        var category = new Category { Id = 1, Name = "Test Category", Color = "#000000" };
+        context.Users.Add(user);
+        context.Categories.Add(category);
+            
+        var skill = new Skill 
+        { 
+            Id = 1, 
+            UserId = 1, 
+            CategoryId = 1, 
+            Name = "Original Name", 
+            Status = "in_progress",
+            Visibility = "private",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Skills.Add(skill);
+        context.SaveChanges();
+
+        var service = new SkillService(context);
+        var request = new UpdateSkillRequest { Name = "Updated Name", Status = "completed" };
+
+        var result = await service.UpdateSkillAsync(1, 1, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Updated Name", result.Name);
+        Assert.Equal("completed", result.Status);
+    }
+
+    [Fact]
+    public async Task DeleteSkillAsync_ShouldRemoveSkill_WhenAuthorized()
+    {
+        // Arrange
+        using var context = GetInMemoryDbContext();
+        var user = new User { Id = 1, FirstName = "Test", LastName = "User", Email = "test@example.com", PasswordHash = "hash" };
+        context.Users.Add(user);
+            
+        var skill = new Skill 
+        { 
+            Id = 1, 
+            UserId = 1, 
+            Name = "To Delete", 
+            Status = "in_progress",
+            CreatedAt = DateTime.UtcNow, 
+            UpdatedAt = DateTime.UtcNow 
+        };
+        context.Skills.Add(skill);
+        context.SaveChanges();
+
+        var service = new SkillService(context);
+
+        // Act
+        var result = await service.DeleteSkillAsync(1, 1);
+        var checkedSkill = await context.Skills.FindAsync(1);
+
+        // Assert
+        Assert.True(result);
+        Assert.Null(checkedSkill);
     }
 }

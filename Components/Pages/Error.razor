@@ -1,0 +1,41 @@
+@page "/Error"
+@inject ILogger<Error> Logger
+
+<PageTitle>Error</PageTitle>
+
+<div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+    <div class="bg-red-50 dark:bg-red-900/20 p-6 rounded-full mb-6">
+        <span class="material-symbols-outlined text-6xl text-red-500 dark:text-red-400">error</span>
+    </div>
+    
+    <h1 class="text-3xl font-bold text-text-main dark:text-white mb-4">Oops! Something went wrong.</h1>
+    <p class="text-text-secondary dark:text-gray-400 max-w-md mx-auto mb-8">
+        We encountered an unexpected error properly processing your request. Don't worry, it's not your fault.
+    </p>
+    
+    <div class="flex gap-4">
+        <a href="/" class="px-6 py-3 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg transition-colors shadow-soft hover:shadow-glow">
+            Return Home
+        </a>
+    </div>
+
+    <div class="mt-12 p-4 border border-red-100 dark:border-red-900/30 rounded-lg max-w-lg w-full bg-white dark:bg-surface-dark">
+        <h3 class="text-sm font-bold text-red-500 uppercase tracking-wider mb-2">Technical Details</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">
+            Request ID: @(RequestId ?? "N/A")
+        </p>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+        Logger.LogError($"Error processed by Error page. Request ID: {RequestId}");
+    }
+}
