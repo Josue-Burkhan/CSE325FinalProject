@@ -186,6 +186,7 @@ public class CreateGoalRequest
     public string? Description { get; set; }
     public decimal? TargetHours { get; set; }
     public DateTime? TargetDate { get; set; }
+    public string Status { get; set; } = "pending";
     public int SortOrder { get; set; } = 0;
     
     public List<CreateMilestoneRequest> Milestones { get; set; } = new();

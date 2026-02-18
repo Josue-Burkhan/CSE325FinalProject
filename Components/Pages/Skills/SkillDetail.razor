@@ -133,7 +133,7 @@ else
                 <h2 class="text-xl font-bold text-text-main dark:text-white">Goals</h2>
                 @if (isOwner)
                 {
-                    <button class="flex items-center gap-2 px-4 h-9 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-text-main dark:text-white font-medium text-sm rounded-lg transition-colors">
+                    <button @onclick="NavigateToAddGoal" class="flex items-center gap-2 px-4 h-9 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-text-main dark:text-white font-medium text-sm rounded-lg transition-colors">
                         <span class="material-symbols-outlined text-[18px]">add</span>
                         Add Goal
                     </button>
@@ -285,6 +285,11 @@ else
     {
         CloseMenu();
          Navigation.NavigateTo($"/skills/edit/{Id}");
+    }
+
+    private void NavigateToAddGoal()
+    {
+        Navigation.NavigateTo($"/skills/{Id}/goals/new");
     }
 
     private async Task DeleteSkill()

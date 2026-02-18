@@ -44,7 +44,7 @@
         "DefaultConnection": "Server=localhost;Database=skilltracker;User=root;Password=yourpassword;"
       },
       "Gemini": {
-        "ApiKey": "YOUR_API_KEY"
+        "ApiKey": "###########"
       }
     }
     ```

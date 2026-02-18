@@ -90,7 +90,7 @@ public class GoalService : IGoalService
             Description = request.Description?.Trim(),
             TargetHours = request.TargetHours,
             TargetDate = request.TargetDate,
-            Status = "pending",
+            Status = request.Status,
             SortOrder = maxOrder + 1,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -161,19 +161,57 @@ public class GoalService : IGoalService
     
     public async Task<bool> DeleteGoalAsync(int goalId, int userId)
     {
-        var goal = await _context.Goals.FirstOrDefaultAsync(g => g.Id == goalId && g.UserId == userId);
-        
-        if (goal == null) return false;
-        
-        var skillId = goal.SkillId;
-        
-        _context.Goals.Remove(goal);
-        await _context.SaveChangesAsync();
-        
-        // Update skill progress
-        await _skillService.UpdateSkillProgressAsync(skillId);
-        
-        return true;
+        try
+        {
+            var goal = await _context.Goals
+                .Include(g => g.Milestones)
+                .Include(g => g.ProgressLogs)
+                .FirstOrDefaultAsync(g => g.Id == goalId && g.UserId == userId);
+            
+            if (goal == null) return false;
+            
+            var skillId = goal.SkillId;
+            
+            // 1. Logs referencing this goal - decouple them
+            if (goal.ProgressLogs != null && goal.ProgressLogs.Any())
+            {
+                foreach (var log in goal.ProgressLogs)
+                {
+                    log.GoalId = null;
+                }
+            }
+            
+            // 2. Milestones and their completions
+            if (goal.Milestones != null && goal.Milestones.Any())
+            {
+                var milestoneIds = goal.Milestones.Select(m => m.Id).ToList();
+                
+                // Manually fetch and remove completions since navigation property is missing on Milestone
+                var completions = await _context.MilestoneCompletions
+                    .Where(mc => milestoneIds.Contains(mc.MilestoneId))
+                    .ToListAsync();
+                
+                if (completions.Any())
+                {
+                    _context.MilestoneCompletions.RemoveRange(completions);
+                }
+                
+                _context.Milestones.RemoveRange(goal.Milestones);
+            }
+            
+            _context.Goals.Remove(goal);
+            await _context.SaveChangesAsync();
+            
+            // Update skill progress
+            await _skillService.UpdateSkillProgressAsync(skillId);
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting goal: {ex.Message}");
+            return false;
+        }
     }
     
     public async Task UpdateGoalProgressAsync(int goalId)

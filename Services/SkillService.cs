@@ -245,43 +245,61 @@ public class SkillService : ISkillService
     
     public async Task<bool> DeleteSkillAsync(int skillId, int userId)
     {
-        var skill = await _context.Skills
-            .Include(s => s.Goals).ThenInclude(g => g.Milestones)
-            .Include(s => s.ProgressLogs)
-            .Include(s => s.Schedule!).ThenInclude(sch => sch.ScheduleDays)
-            .FirstOrDefaultAsync(s => s.Id == skillId && s.UserId == userId);
-        
-        if (skill == null) return false;
-        
-        // Cascade deletes associated data manually to ensure integrity
-        // 1. Removes all progress logs associated with the skill
-        if (skill.ProgressLogs != null && skill.ProgressLogs.Any())
-            _context.ProgressLogs.RemoveRange(skill.ProgressLogs);
-            
-        // 2. Removes the schedule and its days
-        if (skill.Schedule != null)
+        try
         {
-            if (skill.Schedule.ScheduleDays != null)
-                _context.ScheduleDays.RemoveRange(skill.Schedule.ScheduleDays);
-            _context.SkillSchedules.Remove(skill.Schedule);
-        }
+            var skill = await _context.Skills
+                .Include(s => s.Goals).ThenInclude(g => g.Milestones)
+                .Include(s => s.ProgressLogs).ThenInclude(pl => pl.MilestoneCompletions)
+                .Include(s => s.Schedule!).ThenInclude(sch => sch.ScheduleDays)
+                .FirstOrDefaultAsync(s => s.Id == skillId && s.UserId == userId);
             
-        // 3. Goals & Milestones
-        if (skill.Goals != null && skill.Goals.Any())
-        {
-            foreach (var goal in skill.Goals)
+            if (skill == null) return false;
+            
+            // Cascade deletes associated data manually to ensure integrity
+            
+            // 1. Removes all progress logs associated with the skill
+            if (skill.ProgressLogs != null && skill.ProgressLogs.Any())
             {
-                if (goal.Milestones != null && goal.Milestones.Any())
-                    _context.Milestones.RemoveRange(goal.Milestones);
+                // First remove milestone completions associated with these logs
+                var completions = skill.ProgressLogs.SelectMany(pl => pl.MilestoneCompletions).ToList();
+                if (completions.Any())
+                {
+                    _context.MilestoneCompletions.RemoveRange(completions);
+                }
+                
+                _context.ProgressLogs.RemoveRange(skill.ProgressLogs);
             }
-            _context.Goals.RemoveRange(skill.Goals);
+                
+            // 2. Removes the schedule and its days
+            if (skill.Schedule != null)
+            {
+                if (skill.Schedule.ScheduleDays != null && skill.Schedule.ScheduleDays.Any())
+                    _context.ScheduleDays.RemoveRange(skill.Schedule.ScheduleDays);
+                _context.SkillSchedules.Remove(skill.Schedule);
+            }
+                
+            // 3. Goals & Milestones
+            if (skill.Goals != null && skill.Goals.Any())
+            {
+                foreach (var goal in skill.Goals)
+                {
+                    if (goal.Milestones != null && goal.Milestones.Any())
+                        _context.Milestones.RemoveRange(goal.Milestones);
+                }
+                _context.Goals.RemoveRange(skill.Goals);
+            }
+            
+            // 4. Skill
+            _context.Skills.Remove(skill);
+            await _context.SaveChangesAsync();
+            
+            return true;
         }
-        
-        // 4. Skill
-        _context.Skills.Remove(skill);
-        await _context.SaveChangesAsync();
-        
-        return true;
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting skill: {ex.Message}");
+            return false;
+        }
     }
     
     public async Task<List<CategoryDto>> GetCategoriesAsync()

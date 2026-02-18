@@ -104,7 +104,7 @@
         {
             @foreach (var skill in filteredSkills)
             {
-                <SkillCard Skill="skill" />
+                <SkillCard Skill="skill" OnDelete="HandleDeleteSkill" />
             }
             <AddSkillCard />
         }
@@ -160,5 +160,17 @@
         }
         
         return baseClass + "bg-background-light dark:bg-background-dark border border-transparent hover:border-gray-200 dark:hover:border-gray-700 text-text-secondary dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800";
+    }
+
+    private async Task HandleDeleteSkill(int skillId)
+    {
+        var success = await SkillService.DeleteSkillAsync(skillId, userId);
+        
+        if (success)
+        {
+            skills.RemoveAll(s => s.Id == skillId);
+            stats = await ProgressLogService.GetDashboardStatsAsync(userId);
+            StateHasChanged();
+        }
     }
 }
