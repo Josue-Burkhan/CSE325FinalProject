@@ -210,16 +210,10 @@ Respond with ONLY the updated Goal JSON object.";
     
     private bool NeedsClarification(AiPlanRequest request)
     {
-        // Ask for clarification if goal is vague or missing key details
-        var goal = request.GoalDescription.ToLower();
+        var goal = request.GoalDescription.Trim();
         
-        // Simple heuristic: Short goals likely need more detail
-        if (goal.Split(' ').Length < 5) return true;
-        
-        // Checks for vague keywords that indicate a need for clarification
-        var vagueTerms = new[] { "learn", "get better at", "improve", "master", "understand" };
-        if (vagueTerms.Any(v => goal.Contains(v)) && request.Clarifications.Count == 0)
-            return true;
+        if (string.IsNullOrWhiteSpace(goal)) return true;
+        if (goal.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length < 3) return true;
         
         return false;
     }
@@ -303,9 +297,27 @@ Respond with ONLY the question, nothing else. Keep it conversational and friendl
     {
         var context = BuildPrompt(request);
         
+        // Calculate number of weeks from now to target date
+        int totalWeeks = 8; // default fallback
+        if (request.TargetDate.HasValue)
+        {
+            var daysUntilTarget = (request.TargetDate.Value - DateTime.Today).Days;
+            totalWeeks = Math.Max(1, (int)Math.Ceiling(daysUntilTarget / 7.0));
+        }
+        
+        // Clamp goals: at least 2, at most the number of weeks, capped at 12
+        int goalCount = Math.Clamp(totalWeeks, 2, 12);
+        
         return $@"You are an expert learning coach. Create a structured learning plan based on the following:
 
 {context}
+
+IMPORTANT RULES:
+- The user has {totalWeeks} weeks total until their target date.
+- Create exactly {goalCount} weekly goals distributed across those {totalWeeks} weeks.
+- If {totalWeeks} weeks > {goalCount} goals, space them out evenly (e.g., Week 1, Week 3, Week 5...).
+- Do NOT ask questions. Do NOT request clarification. Just generate the best plan you can with the information provided.
+- If the goal is short or simple, infer reasonable sub-goals and milestones based on common learning paths for that topic.
 
 Generate a JSON response with this exact structure:
 {{
@@ -315,7 +327,7 @@ Generate a JSON response with this exact structure:
   ""category"": ""One of: Programming, Languages, Music, Art & Design, Business, Health & Fitness, Personal Development, Academic, or Other"",
   ""goals"": [
     {{
-      ""title"": ""Week 1: Goal title"",
+      ""title"": ""Week N: Goal title"",
       ""description"": ""Brief description of this goal"",
       ""weekNumber"": 1,
       ""milestones"": [
@@ -327,7 +339,7 @@ Generate a JSON response with this exact structure:
   ]
 }}
 
-Create 4-8 weekly goals with 3-5 milestones each. Make milestones specific and actionable.
+Create exactly {goalCount} goals with 3-5 milestones each. Make milestones specific and actionable.
 Respond with ONLY the JSON, no additional text.";
     }
     
